@@ -1,0 +1,59 @@
+---
+title: "Paper_result_analysis"
+author: "Benjamin Grier"
+format: html
+editor: visual
+---
+
+## Quarto
+
+Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
+
+## Running Code
+
+When you click the **Render** button a document will be generated that includes both content and the output of embedded code. You can embed code like this:
+
+```{r}
+1 + 1
+```
+
+You can add options to executable code like this
+
+```{r}
+#| echo: false
+2 * 2
+```
+
+The `echo: false` option disables the printing of code (only output is displayed).
+
+# Climate Risk Assessment for Yellowtail Kingfish - Statistical Analysis
+
+## Load Required files and setup analysis file
+
+```{r}
+setwd('/home/ben/Documents/Projects/') # Set working directory to include all required files.
+library(data.table)
+library(ggplot2)
+library(sf)
+library(ggpubr)
+library(maps)
+library(dplyr)
+library(scico)
+library(nlme)
+library(emmeans)
+library(SIBER)
+library(distfree.cr)
+```
+
+Load data files 
+```{r}
+coordinates = read.csv("kingfish_required-files/Required Files/Global_Coordinates.csv") # Load coordinate point data 
+# Load results file for population level analyses for all depths
+pop_all_depth_results <- read.csv('kingfish_required-files/Results/mCRS-DeltamCRS RAW/DeltaCRS_mCRS_RAW_depth_together.csv')
+# Load results file for species level analyses for all depths
+species_results = read.csv('kingfish_required-files/Results/mCRS-DeltamCRS RAW/DeltaCRS_mCRS_RAW_depth_together_SpL.csv')
+# Load results file for population level analyses for surface depth
+surface_results = read.csv("kingfish_required-files/Results/mCRS-DeltamCRS RAW/DeltaCRS_mCRS_RAW_surface_depth.csv")
+```
+
+Initial data processing of results files

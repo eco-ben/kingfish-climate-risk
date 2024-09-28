@@ -1,4 +1,4 @@
-setwd('/home/ben/Documents/Projects/kingfish-climate')
+setwd('/home/ben/Documents/Projects/')
 library(data.table)
 library(ggplot2)
 library(sf)
@@ -11,22 +11,22 @@ library(emmeans)
 library(SIBER)
 library(distfree.cr)
 #### A) Load DeltaCRS Results ----
-PremeanDT <- read.csv('Results/mCRS-DeltamCRS RAW/DeltaCRS_mCRS_RAW_depth_together.csv')
+PremeanDT <- read.csv('kingfish_required-files/Results/mCRS-DeltamCRS RAW/DeltaCRS_mCRS_RAW_depth_together.csv')
 PremeanDT$Depth <- as.factor(PremeanDT$Depth)
-# CRS.dt <- read.csv('Results/DeltaCRS_PopValues.csv')
+# CRS.dt <- read.csv('kingfish_required-files/Results/DeltaCRS_PopValues.csv')
 # CRS.dt$PopID <- as.factor(CRS.dt$PopID)
 # CRS.dt$Depth <- as.factor(CRS.dt$Depth)
-Coordinates <- read.csv('Required Files/Global_Coordinates.csv')
+Coordinates <- read.csv('kingfish_required-files/Required Files/Global_Coordinates.csv')
 
 ##
 #ggplot() + geom_boxplot(data = Premean_Old[Premean_Old$Scenario == 'ssp85'&Premean_Old$Year==2100 ,], aes(x=as.factor(Depth), y=CRS)) +facet_wrap(~PopID) + ggtitle('old CRS results for SSP85')
-#ggsave('Results/Plots/Old_mcrs_results_ssp85.png',width = 200, height = 150, dpi=300, units='mm')
+#ggsave('kingfish_required-files/Results/Plots/Old_mcrs_results_ssp85.png',width = 200, height = 150, dpi=300, units='mm')
 
 ggplot() + geom_boxplot(data = PremeanDT[PremeanDT$Scenario == 'ssp85'&PremeanDT$Year==2100 ,], aes(x=as.factor(Depth), y=CRS)) +facet_wrap(~PopID) + ggtitle('new CRS results for SSP85')
-#ggsave('Results/Plots/Revised_mcrs_results_ssp85.png',width = 200, height = 150, dpi=300, units='mm')
+#ggsave('kingfish_required-files/Results/Plots/Revised_mcrs_results_ssp85.png',width = 200, height = 150, dpi=300, units='mm')
 
 ## Load Species level analysis results 
-SpL <- read.csv('Results/mCRS-DeltamCRS RAW/DeltaCRS_mCRS_RAW_depth_together_SpL.csv')
+SpL <- read.csv('kingfish_required-files/Results/mCRS-DeltamCRS RAW/DeltaCRS_mCRS_RAW_depth_together_SpL.csv')
 
 #Calculate annual averages for mCRS and DeltaCRS ID values
 PremeanDT.Year <- data.table(PremeanDT)
@@ -50,7 +50,7 @@ PremeanDT.Year$Level <- 'Population'
 SpL$Level <- 'Species'
 Comb.Data <- rbind(PremeanDT.Year, SpL)
 
-surface = read.csv("Results/mCRS-DeltamCRS RAW/DeltaCRS_mCRS_RAW_surface_depth.csv")
+surface = read.csv("kingfish_required-files/Results/mCRS-DeltamCRS RAW/DeltaCRS_mCRS_RAW_surface_depth.csv")
 surface = data.table(surface)
 names(surface)[names(surface) == "Extract_ID"] = "Extract.ID"
 surface = surface[, .(DeltaCRS=mean(DeltaCRS), CRS=mean(CRS)), by=.(PopID, Depth, Extract.ID, Year, Scenario)]
@@ -69,10 +69,10 @@ ggplot() +
 
 #### B) Load Environmental Data for IDs, Dates and Scenarios (From CRS Scripts) ----
 
-load('Required Files/historical_stack_ensemble.RData')
-load('Required Files/ssp26_stack_ensemble.RData')
-load('Required Files/ssp45_stack_ensemble.RData')
-load('Required Files/ssp85_stack_ensemble.RData')
+load('kingfish_required-files/Required Files/historical_stack_ensemble.RData')
+load('kingfish_required-files/Required Files/ssp26_stack_ensemble.RData')
+load('kingfish_required-files/Required Files/ssp45_stack_ensemble.RData')
+load('kingfish_required-files/Required Files/ssp85_stack_ensemble.RData')
 ENV <- list(historical.stack.ensemble, ssp26.stack.ensemble, ssp45.stack.ensemble, ssp85.stack.ensemble)
 ENV.summary <- rbindlist(ENV) #combine all data tables into one ENV
 rm(ENV,historical.stack.ensemble, ssp26.stack.ensemble, ssp45.stack.ensemble,ssp85.stack.ensemble, DataCollation)
@@ -197,7 +197,7 @@ Novel.Year <- left_join(Novel.Year, Coordinates[,c(9,4,1,2)], by = c('Extract.ID
 Novel.Year <- Novel.Year[!Novel.Year$Scenario == 'historical',]
 
 NovelY.med <- Novel.Year %>% group_by(Scenario, Depth, PopID) %>% summarise(NY.med = median(Novel.Year, na.rm = T))
-write.csv(NovelY.med, file = 'Results/Statistical Results/new_method_depth_together/Regional_R_emergence_med.csv',row.names = F)
+write.csv(NovelY.med, file = 'kingfish_required-files/Results/Statistical Results/new_method_depth_together/Regional_R_emergence_med.csv',row.names = F)
 
 Combined.NY <- as.data.frame(Comb.Data) %>% filter(CRS >= 0) %>% 
   group_by(Extract.ID, Level, Depth, Scenario) %>% 
@@ -232,7 +232,7 @@ NY.AP.ssp85 <- as.data.frame(ssp85_NYpair$`simple contrasts for PopID`)
 NY.AP.ssp85$Scenario <- 'ssp85'
 NY.Ac.Pops <- rbind(NY.AP.ssp26,NY.AP.ssp45,NY.AP.ssp85)
 NY.Ac.Pops$Significance <- ifelse(NY.Ac.Pops$p.value < 0.05, 'significant','not significant')
-write.csv(NY.Ac.Pops, file = 'Results/Statistical Results/new_method_depth_together/NYResults_Across_Populations_CustWL.csv', row.names = F)
+write.csv(NY.Ac.Pops, file = 'kingfish_required-files/Results/Statistical Results/new_method_depth_together/NYResults_Across_Populations_CustWL.csv', row.names = F)
 
 NY.AD.ssp26 <- as.data.frame(ssp26_NYpair$`simple contrasts for Depth`)
 NY.AD.ssp26$Scenario <- 'ssp26'
@@ -242,7 +242,7 @@ NY.AD.ssp85 <- as.data.frame(ssp85_NYpair$`simple contrasts for Depth`)
 NY.AD.ssp85$Scenario <- 'ssp85'
 NY.Ac.Depths <- rbind(NY.AD.ssp26,NY.AD.ssp45,NY.AD.ssp85)
 NY.Ac.Depths$Significance <- ifelse(NY.Ac.Depths$p.value < 0.05, 'significant','not significant')
-write.csv(NY.Ac.Depths, file = 'Results/Statistical Results/new_method_depth_together/NYResults_Across_Depths_CustWL.csv', row.names = F)
+write.csv(NY.Ac.Depths, file = 'kingfish_required-files/Results/Statistical Results/new_method_depth_together/NYResults_Across_Depths_CustWL.csv', row.names = F)
 
 ###### regional risk rate of change ----
 # mCRS ~ Year linear regression
@@ -266,15 +266,15 @@ Y.eff.ssp85 <- as.data.frame(test(YearT.ssp85))
 Y.eff.ssp85$Scenario <- 'ssp85'
 
 Year.effect <- rbind(Y.eff.ssp26, Y.eff.ssp45, Y.eff.ssp85)
-write.csv(Year.effect, file = 'Results/Statistical Results/new_method_depth_together/Results_Yeartimeseries.csv', row.names = F)
+write.csv(Year.effect, file = 'kingfish_required-files/Results/Statistical Results/new_method_depth_together/Results_Yeartimeseries.csv', row.names = F)
 
 # Year trend plots
 sjPlot::plot_model(Year_lm.ssp26, type = 'pred', terms = c('Year','Depth','PopID'))
-ggsave(filename = 'Results/Plots/new_method_depth_together/YearModelplot_ssp26.png',height = 100, width = 300,dpi = 300, units = 'mm')
+ggsave(filename = 'kingfish_required-files/Results/Plots/new_method_depth_together/YearModelplot_ssp26.png',height = 100, width = 300,dpi = 300, units = 'mm')
 sjPlot::plot_model(Year_lm.ssp45, type = 'pred', terms = c('Year','Depth','PopID'))
-ggsave(filename = 'Results/Plots/new_method_depth_together/YearModelplot_ssp45.png',height = 100, width = 300,dpi = 300, units = 'mm')
+ggsave(filename = 'kingfish_required-files/Results/Plots/new_method_depth_together/YearModelplot_ssp45.png',height = 100, width = 300,dpi = 300, units = 'mm')
 sjPlot::plot_model(Year_lm.ssp85, type = 'pred', terms = c('Year','Depth','PopID'))
-ggsave(filename = 'Results/Plots/new_method_depth_together/YearModelplot_ssp85.png',height = 100, width = 300,dpi = 300, units = 'mm')
+ggsave(filename = 'kingfish_required-files/Results/Plots/new_method_depth_together/YearModelplot_ssp85.png',height = 100, width = 300,dpi = 300, units = 'mm')
 
 ##### local risk analyses ----
 Warmlevel.data$PopLab <- as.character(Warmlevel.data$PopID)
@@ -313,7 +313,7 @@ AP.ssp85 <- as.data.frame(ssp85_pair$`simple contrasts for PopLab`)
 AP.ssp85$Scenario <- 'ssp85'
 Ac.Pops <- rbind(AP.ssp26,AP.ssp45,AP.ssp85)
 Ac.Pops$Significance <- ifelse(Ac.Pops$p.value < 0.05, 'significant','not significant')
-write.csv(Ac.Pops, file = 'Results/Statistical Results/new_method_depth_together/Results_Across_Populations_CustWL.csv', row.names = F)
+write.csv(Ac.Pops, file = 'kingfish_required-files/Results/Statistical Results/new_method_depth_together/Results_Across_Populations_CustWL.csv', row.names = F)
 
 AD.ssp26 <- as.data.frame(ssp26_pair$`simple contrasts for Depth`)
 AD.ssp26$Scenario <- 'ssp26'
@@ -323,7 +323,7 @@ AD.ssp85 <- as.data.frame(ssp85_pair$`simple contrasts for Depth`)
 AD.ssp85$Scenario <- 'ssp85'
 Ac.Depths <- rbind(AD.ssp26,AD.ssp45,AD.ssp85)
 Ac.Depths$Significance <- ifelse(Ac.Depths$p.value < 0.05, 'significant','not significant')
-write.csv(Ac.Depths, file = 'Results/Statistical Results/new_method_depth_together/Results_Across_Depths_CustWL.csv', row.names = F)
+write.csv(Ac.Depths, file = 'kingfish_required-files/Results/Statistical Results/new_method_depth_together/Results_Across_Depths_CustWL.csv', row.names = F)
 
 ###### Latitude effect ----
 Lat.emt.ssp26 <- (emtrends(ssp26_WL.lm, ~ Depth:PopLab, var = 'Distance_from_equator'))
@@ -338,7 +338,7 @@ Lat.eff.ssp85$Scenario <- 'ssp85'
 
 Lat.Trends <- rbind(Lat.eff.ssp26, Lat.eff.ssp45, Lat.eff.ssp85)
 Lat.Trends$Significance <- ifelse(Lat.Trends$p.value < 0.05, 'significant','not significant')
-write.csv(Lat.Trends, file = 'Results/Statistical Results/new_method_depth_together/Results_Latitude_CustWL.csv', row.names = F)
+write.csv(Lat.Trends, file = 'kingfish_required-files/Results/Statistical Results/new_method_depth_together/Results_Latitude_CustWL.csv', row.names = F)
 
 #Latitude trend plots
 Lat_26 <- ggeffects::ggpredict(ssp26_WL.lm, terms = c('Distance_from_equator','Depth','PopLab'))
@@ -348,7 +348,7 @@ Lat_26 <- plot(Lat_26, rawdata = TRUE) + theme_classic() + theme(plot.title = el
                                                                                            face = 'bold'), 
                                                                  strip.text.x = element_text(size = 10)) + 
   ylab('\u0394mCRS') + xlab('Distance from equator (\u00b0)') + ggtitle('\u0394mCRS across Latitude - SSP1-2.6')
-ggsave(plot = Lat_26, filename = 'Results/Plots/new_method_depth_together/LatitudeModelplot_ssp26.png',height = 150, width = 250,dpi = 300, units = 'mm')
+ggsave(plot = Lat_26, filename = 'kingfish_required-files/Results/Plots/new_method_depth_together/LatitudeModelplot_ssp26.png',height = 150, width = 250,dpi = 300, units = 'mm')
 Lat_45 <- ggeffects::ggpredict(ssp45_WL.lm, terms = c('Distance_from_equator','Depth','PopLab'))
 Lat_45 <- plot(Lat_45, rawdata = TRUE) + theme_classic() + theme(plot.title = element_blank(), 
                                                                  axis.text = element_text(size = 13), 
@@ -356,7 +356,7 @@ Lat_45 <- plot(Lat_45, rawdata = TRUE) + theme_classic() + theme(plot.title = el
                                                                                            face = 'bold'), 
                                                                  strip.text.x = element_text(size = 10)) + 
   ylab('\u0394mCRS') + xlab('Distance from equator (\u00b0)') + ggtitle('\u0394mCRS across Latitude - SSP2-4.5')
-ggsave(plot = Lat_45, filename = 'Results/Plots/new_method_depth_together/LatitudeModelplot_ssp45.png',height = 150, width = 250,dpi = 300, units = 'mm')
+ggsave(plot = Lat_45, filename = 'kingfish_required-files/Results/Plots/new_method_depth_together/LatitudeModelplot_ssp45.png',height = 150, width = 250,dpi = 300, units = 'mm')
 Lat_85 <- ggeffects::ggpredict(ssp85_WL.lm, terms = c('Distance_from_equator','Depth','PopLab'))
 Lat_85 <- plot(Lat_85, rawdata = TRUE) + theme_classic() + theme(plot.title = element_blank(), 
                                                                  axis.text = element_text(size = 13), 
@@ -364,7 +364,7 @@ Lat_85 <- plot(Lat_85, rawdata = TRUE) + theme_classic() + theme(plot.title = el
                                                                                            face = 'bold'), 
                                                                  strip.text.x = element_text(size = 10)) + 
   ylab('\u0394mCRS') + xlab('Distance from equator (\u00b0)') + ggtitle('\u0394mCRS across Latitude - SSP5-8.5')
-ggsave(plot = Lat_85, filename = 'Results/Plots/new_method_depth_together/LatitudeModelplot_ssp85.png',height = 150, width = 250,dpi = 300, units = 'mm')
+ggsave(plot = Lat_85, filename = 'kingfish_required-files/Results/Plots/new_method_depth_together/LatitudeModelplot_ssp85.png',height = 150, width = 250,dpi = 300, units = 'mm')
 
 ###### Species versus Population level analyses ----
 
@@ -384,7 +384,7 @@ ssp45.SpL_pair$Scenario <- 'ssp45'
 ssp85.SpL_pair <- as.data.frame(pairs(ssp85.SpL_emm, simple = list('Level')))
 ssp85.SpL_pair$Scenario <- 'ssp85'
 Analysis.Lvls <- rbind(ssp26.SpL_pair, ssp45.SpL_pair, ssp85.SpL_pair)
-write.csv(Analysis.Lvls, file = 'Results/Statistical Results/new_method_depth_together/Species_PopulationlvlAN.csv',row.names = F)
+write.csv(Analysis.Lvls, file = 'kingfish_required-files/Results/Statistical Results/new_method_depth_together/Species_PopulationlvlAN.csv',row.names = F)
 
 ### F) Figures ----
 ##### modelled temperature plots ----
@@ -422,7 +422,7 @@ ggplot() +
   facet_wrap(~PopLab, nrow = 1) + theme_classic() + ggtitle('Population Temperature change - SSP1-2.6') + 
   theme(axis.text = element_text(size = 9), axis.title = element_text(size = 14, face = 'bold'), 
         strip.text.x = element_text(size = 10)) 
-ggsave('Results/Plots/new_method_depth_together/Modelled_TempChange_ssp26.png',height = 150, width = 300, dpi = 300, units = 'mm')
+ggsave('kingfish_required-files/Results/Plots/new_method_depth_together/Modelled_TempChange_ssp26.png',height = 150, width = 300, dpi = 300, units = 'mm')
 ggplot() +
   geom_line(data = newTempGAM[newTempGAM$Scenario == 'ssp45',], aes(x = Year, y = DeltaTModelled, color = as.factor(Depth))) +
   geom_line(data = meanTemp[meanTemp$Scenario == 'ssp45',],aes(x = Year, y = DeltaTemp, color = as.factor(Depth)), alpha = 0.2) +
@@ -433,7 +433,7 @@ ggplot() +
   facet_wrap(~PopLab, nrow = 1) + theme_classic() + ggtitle('Population Temperature change - SSP2-4.5') + 
   theme(axis.text = element_text(size = 9), axis.title = element_text(size = 14, face = 'bold'), 
         strip.text.x = element_text(size = 10)) 
-ggsave('Results/Plots/new_method_depth_together/Modelled_TempChange_ssp45.png',height = 150, width = 300, dpi = 300, units = 'mm')
+ggsave('kingfish_required-files/Results/Plots/new_method_depth_together/Modelled_TempChange_ssp45.png',height = 150, width = 300, dpi = 300, units = 'mm')
 ggplot() +
   geom_line(data = newTempGAM[newTempGAM$Scenario == 'ssp85',], aes(x = Year, y = DeltaTModelled, color = as.factor(Depth))) +
   geom_line(data = meanTemp[meanTemp$Scenario == 'ssp85',],aes(x = Year, y = DeltaTemp, color = as.factor(Depth)), alpha = 0.2) +
@@ -444,7 +444,7 @@ ggplot() +
   facet_wrap(~PopLab, nrow = 1) + theme_classic() + ggtitle('Population Temperature change - SSP5-8.5') + 
   theme(axis.text = element_text(size = 9), axis.title = element_text(size = 14, face = 'bold'), 
         strip.text.x = element_text(size = 10)) 
-ggsave('Results/Plots/new_method_depth_together/Modelled_TempChange_ssp85.png',height = 150, width = 300, dpi = 300, units = 'mm')
+ggsave('kingfish_required-files/Results/Plots/new_method_depth_together/Modelled_TempChange_ssp85.png',height = 150, width = 300, dpi = 300, units = 'mm')
 
 ##### Regional risk emergence plots ----
 Novel.Year$PopLab <- Novel.Year$PopID
@@ -466,7 +466,7 @@ ggplot() +
   facet_wrap(~PopLab, nrow = 1) + theme_classic() + ggtitle('Regional risk emergence timing across depths - SSP1-2.6') + 
   theme(axis.text = element_text(size = 13), axis.title = element_text(size = 14, face = 'bold'), 
         strip.text.x = element_text(size = 10)) 
-ggsave(filename = 'Results/Plots/new_method_depth_together/NovelYearAD_ssp26.png', height = 150, width = 250, dpi = 300, units = 'mm')
+ggsave(filename = 'kingfish_required-files/Results/Plots/new_method_depth_together/NovelYearAD_ssp26.png', height = 150, width = 250, dpi = 300, units = 'mm')
 ####### 2) ssp45 ----
 ggplot() +
   geom_boxplot(data = Novel.Year[Novel.Year$Scenario == 'ssp45',], 
@@ -477,7 +477,7 @@ ggplot() +
   facet_wrap(~PopLab, nrow = 1) + theme_classic() + ggtitle('Regional risk emergence timing across depths - SSP2-4.5') + 
   theme(axis.text = element_text(size = 13), axis.title = element_text(size = 14, face = 'bold'), 
         strip.text.x = element_text(size = 10)) 
-ggsave(filename = 'Results/Plots/new_method_depth_together/NovelYearAD_ssp45.png', height = 150, width = 250, dpi = 300, units = 'mm')
+ggsave(filename = 'kingfish_required-files/Results/Plots/new_method_depth_together/NovelYearAD_ssp45.png', height = 150, width = 250, dpi = 300, units = 'mm')
 ####### 3) ssp85 ----
 ggplot() +
   geom_boxplot(data = Novel.Year[Novel.Year$Scenario == 'ssp85',], 
@@ -488,7 +488,7 @@ ggplot() +
   facet_wrap(~PopLab, nrow = 1) + theme_classic() + ggtitle('Regional risk emergence timing across depths - SSP5-8.5') + 
   theme(axis.text = element_text(size = 13), axis.title = element_text(size = 14, face = 'bold'), 
         strip.text.x = element_text(size = 10)) 
-ggsave(filename = 'Results/Plots/new_method_depth_together/NovelYearAD_ssp85.png', height = 150, width = 250, dpi = 300, units = 'mm')
+ggsave(filename = 'kingfish_required-files/Results/Plots/new_method_depth_together/NovelYearAD_ssp85.png', height = 150, width = 250, dpi = 300, units = 'mm')
 ###### Across Population Boxplots ----
 ####### 1) ssp26 ----
 ggplot() +
@@ -501,7 +501,7 @@ ggplot() +
   labs(fill = 'Population') + 
   theme(axis.text = element_text(size = 13), axis.title = element_text(size = 14, face = 'bold'), 
         strip.text.x = element_text(size = 10)) 
-ggsave(filename = 'Results/Plots/new_method_depth_together/NovelYearAP_ssp26.png', height = 150, width = 250, dpi = 300, units = 'mm')
+ggsave(filename = 'kingfish_required-files/Results/Plots/new_method_depth_together/NovelYearAP_ssp26.png', height = 150, width = 250, dpi = 300, units = 'mm')
 ####### 2) ssp45 ----
 ggplot() +
   geom_boxplot(data = Novel.Year[Novel.Year$Scenario == 'ssp45',], 
@@ -513,7 +513,7 @@ ggplot() +
   labs(fill = 'Population') +  
   theme(axis.text = element_text(size = 13), axis.title = element_text(size = 14, face = 'bold'), 
         strip.text.x = element_text(size = 10)) 
-ggsave(filename = 'Results/Plots/new_method_depth_together/NovelYearAP_ssp45.png', height = 150, width = 250, dpi = 300, units = 'mm')
+ggsave(filename = 'kingfish_required-files/Results/Plots/new_method_depth_together/NovelYearAP_ssp45.png', height = 150, width = 250, dpi = 300, units = 'mm')
 ####### 3) ssp85 ----
 ggplot() +
   geom_boxplot(data = Novel.Year[Novel.Year$Scenario == 'ssp85',], 
@@ -525,7 +525,7 @@ ggplot() +
   labs(fill = 'Population') + 
   theme(axis.text = element_text(size = 13), axis.title = element_text(size = 14, face = 'bold'), 
         strip.text.x = element_text(size = 10)) 
-ggsave(filename = 'Results/Plots/new_method_depth_together/NovelYearAP_ssp85.png', height = 150, width = 250, dpi = 300, units = 'mm')
+ggsave(filename = 'kingfish_required-files/Results/Plots/new_method_depth_together/NovelYearAP_ssp85.png', height = 150, width = 250, dpi = 300, units = 'mm')
 ###### Regional risk maps ----
 BB_list = list(list(rbind(c(50,-15), c(50,-40), c(0,-40), c(0,-15), c(50,-15))),
                list(rbind(c(285,10), c(200,10), c(200, 40), c(285,40), c(285,10))),
@@ -534,7 +534,7 @@ BB_list = list(list(rbind(c(50,-15), c(50,-40), c(0,-40), c(0,-15), c(50,-15))),
 Boxes <- st_multipolygon(BB_list)
 Boxes <- st_sfc(Boxes, crs = 4326)
 Boxes_360 <- st_shift_longitude(Boxes)
-World <- st_read('Required Files/GIS/ne_10m_land.shp')
+World <- st_read('kingfish_required-files/Required Files/GIS/ne_10m_land.shp')
 World_360 <- sf::st_as_sf(map('world2', plot = FALSE, fill = TRUE))
 Novel.Year_sf <- st_as_sf(Novel.Year, coords = c(6,7), crs = 4326)
 Novel.Year_sf <- st_shift_longitude(Novel.Year_sf)
@@ -563,7 +563,7 @@ mCRSMap <- function(Scenario){
     coord_sf(xlim = c(10,40),ylim = c(-20,-40)) + facet_wrap(~Depth)
   final <- ggarrange(Pacific, SA, heights = c(3,1), widths = c(2.5,1), labels = c('(a)','(b)'), vjust = 1)
   final <- ggarrange(final,leg2, ncol = 1, heights = c(6,1), widths = c(6,1))
-  ggsave(final, filename = paste0('Results/Plots/new_method_depth_together/NovelYear_Map_ ',Scenario,'_custWL.png'), bg = 'white',height = 150, 
+  ggsave(final, filename = paste0('kingfish_required-files/Results/Plots/new_method_depth_together/NovelYear_Map_ ',Scenario,'_custWL.png'), bg = 'white',height = 150, 
          width = 300, dpi = 300, units = 'mm')
 }
 mCRSMap(Scenario = 'ssp26')
@@ -581,7 +581,7 @@ ggplot() +
   scale_y_continuous(limits = c(minDcrs,maxDcrs),breaks = c(-2,-1,0,1,2)) + ylab('\u0394mCRS') + xlab('Depth') + 
   theme(axis.text = element_text(size = 13), axis.title = element_text(size = 14, face = 'bold'), 
         strip.text.x = element_text(size = 10)) 
-ggsave('Results/Plots/new_method_depth_together/DeltaCRS_BoxPlot_acDepth_ssp26_custWL.png',height = 150, width = 250, dpi = 300, units = 'mm')
+ggsave('kingfish_required-files/Results/Plots/new_method_depth_together/DeltaCRS_BoxPlot_acDepth_ssp26_custWL.png',height = 150, width = 250, dpi = 300, units = 'mm')
 ####### 2) 1deg warming (ssp45) ----
 ggplot() + 
   geom_boxplot(data = Warmlevel.data[Warmlevel.data$Scenario == 'ssp45',], aes(x = Depth, y = DeltaCRS, fill = Depth)) + 
@@ -590,7 +590,7 @@ ggplot() +
   scale_y_continuous(limits = c(minDcrs,maxDcrs),breaks = c(-2,-1,0,1,2)) + ylab('\u0394mCRS') + xlab('Depth') + 
   theme(axis.text = element_text(size = 13), axis.title = element_text(size = 14, face = 'bold'), 
         strip.text.x = element_text(size = 10)) 
-ggsave('Results/Plots/new_method_depth_together/DeltaCRS_BoxPlot_acDepth_ssp45_custWL.png',height = 150, width = 250, dpi = 300, units = 'mm')
+ggsave('kingfish_required-files/Results/Plots/new_method_depth_together/DeltaCRS_BoxPlot_acDepth_ssp45_custWL.png',height = 150, width = 250, dpi = 300, units = 'mm')
 ####### 3) 1.75deg warming (ssp85) ----
 ggplot() + 
   geom_boxplot(data = Warmlevel.data[Warmlevel.data$Scenario == 'ssp85',], aes(x = Depth, y = DeltaCRS, fill = Depth)) + 
@@ -599,7 +599,7 @@ ggplot() +
   scale_y_continuous(limits = c(minDcrs,maxDcrs),breaks = c(-2,-1,0,1,2)) + ylab('\u0394mCRS') + xlab('Depth') + 
   theme(axis.text = element_text(size = 13), axis.title = element_text(size = 14, face = 'bold'), 
         strip.text.x = element_text(size = 10))  
-ggsave('Results/Plots/new_method_depth_together/DeltaCRS_BoxPlot_acDepth_ssp85_custWL.png',height = 150, width = 250, dpi = 300, units = 'mm')
+ggsave('kingfish_required-files/Results/Plots/new_method_depth_together/DeltaCRS_BoxPlot_acDepth_ssp85_custWL.png',height = 150, width = 250, dpi = 300, units = 'mm')
 ###### Across Population Boxplots ----
 ####### 1) 0.75deg warming (ssp26) ----
 ggplot() +
@@ -610,7 +610,7 @@ ggplot() +
   labs(fill = 'Population') +
   theme(axis.text = element_text(size = 13), axis.title = element_text(size = 14, face = 'bold'), 
         strip.text.x = element_text(size = 10)) 
-ggsave('Results/Plots/new_method_depth_together/DeltaCRS_BoxPlot_acPop_ssp26_custWL.png',height = 150, width = 250, dpi = 300, units = 'mm')
+ggsave('kingfish_required-files/Results/Plots/new_method_depth_together/DeltaCRS_BoxPlot_acPop_ssp26_custWL.png',height = 150, width = 250, dpi = 300, units = 'mm')
 ####### 2) 1deg warming (ssp45) ----
 ggplot() +
   geom_boxplot(data = Warmlevel.data[Warmlevel.data$Scenario == 'ssp45',], aes(x = PopLab, y = DeltaCRS, fill = PopLab)) +
@@ -620,7 +620,7 @@ ggplot() +
   labs(fill = 'Population') +
   theme(axis.text = element_text(size = 13), axis.title = element_text(size = 14, face = 'bold'), 
         strip.text.x = element_text(size = 10)) 
-ggsave('Results/Plots/new_method_depth_together/DeltaCRS_BoxPlot_acPop_ssp45_custWL.png',height = 150, width = 250, dpi = 300, units = 'mm')
+ggsave('kingfish_required-files/Results/Plots/new_method_depth_together/DeltaCRS_BoxPlot_acPop_ssp45_custWL.png',height = 150, width = 250, dpi = 300, units = 'mm')
 ####### 3) 1.75deg warming (ssp85) ----
 ggplot() +
   geom_boxplot(data = Warmlevel.data[Warmlevel.data$Scenario == 'ssp85',], aes(x = PopLab, y = DeltaCRS, fill = PopLab)) +
@@ -630,7 +630,7 @@ ggplot() +
   labs(fill = 'Population') +
   theme(axis.text = element_text(size = 13), axis.title = element_text(size = 14, face = 'bold'), 
         strip.text.x = element_text(size = 10)) 
-ggsave('Results/Plots/new_method_depth_together/DeltaCRS_BoxPlot_acPop_ssp85_custWL.png',height = 150, width = 250, dpi = 300, units = 'mm')
+ggsave('kingfish_required-files/Results/Plots/new_method_depth_together/DeltaCRS_BoxPlot_acPop_ssp85_custWL.png',height = 150, width = 250, dpi = 300, units = 'mm')
 ###### local risk maps ----
 Warmlevel.data_sf <- st_as_sf(Warmlevel.data, coords = c(8,9), crs = 4326) # make sf object to use in DeltaCRS mapping 
 
@@ -643,7 +643,7 @@ Boxes <- st_multipolygon(BB_list)
 Boxes <- st_sfc(Boxes, crs = 4326)
 Boxes_360 <- st_shift_longitude(Boxes)
 Warmlevel.data_360 <- st_shift_longitude(Warmlevel.data_sf)
-World <- st_read('Required Files/GIS/ne_10m_land.shp')
+World <- st_read('kingfish_required-files/Required Files/GIS/ne_10m_land.shp')
 World_360 <- sf::st_as_sf(map('world2', plot = FALSE, fill = TRUE))
 
 Test <- ggplot() + 
@@ -674,7 +674,7 @@ DeltamCRSMap <- function(Scenario){
     coord_sf(xlim = c(10,40),ylim = c(-20,-40)) + facet_wrap(~Depth)
   final <- ggarrange(Pacific, SA, heights = c(3,1), widths = c(2.5,1), labels = c('(a)','(b)'), vjust = 1)
   final <- ggarrange(final,leg, ncol = 1, heights = c(6,1), widths = c(6,1))
-  ggsave(final, filename = paste0('Results/Plots/new_method_depth_together/DeltaCRS_Map_ ',Scenario,'_custWL.png'), bg = 'white',height = 150, 
+  ggsave(final, filename = paste0('kingfish_required-files/Results/Plots/new_method_depth_together/DeltaCRS_Map_ ',Scenario,'_custWL.png'), bg = 'white',height = 150, 
          width = 300, dpi = 300, units = 'mm')
 }
 DeltamCRSMap(Scenario = 'ssp26')
@@ -691,7 +691,7 @@ ggplot() + geom_boxplot(data = Comb.Data[Comb.Data$Scenario == 'ssp26'&Comb.Data
   labs(fill = 'Analysis Level') + 
   theme(axis.text = element_text(size = 13), axis.title = element_text(size = 14, face = 'bold'), 
         strip.text.x = element_text(size = 10)) 
-ggsave(filename = 'Results/Plots/new_method_depth_together/NicheLevelAnalysis_ssp26.png', height = 150, width = 250, dpi = 300, units = 'mm')
+ggsave(filename = 'kingfish_required-files/Results/Plots/new_method_depth_together/NicheLevelAnalysis_ssp26.png', height = 150, width = 250, dpi = 300, units = 'mm')
 
 ggplot() + geom_boxplot(data = Comb.Data[Comb.Data$Scenario == 'ssp45'&Comb.Data$Year == 2100,], aes(x = Depth, y = CRS, fill = Level)) + 
   scale_y_continuous(limits = c(minComb.CRS, maxComb.CRS), breaks = c(-4,-3,-2,-1,0,1)) +
@@ -699,7 +699,7 @@ ggplot() + geom_boxplot(data = Comb.Data[Comb.Data$Scenario == 'ssp45'&Comb.Data
   labs(fill = 'Analysis Level') + 
   theme(axis.text = element_text(size = 13), axis.title = element_text(size = 14, face = 'bold'), 
         strip.text.x = element_text(size = 10)) 
-ggsave(filename = 'Results/Plots/new_method_depth_together/NicheLevelAnalysis_ssp45.png', height = 150, width = 250, dpi = 300, units = 'mm')
+ggsave(filename = 'kingfish_required-files/Results/Plots/new_method_depth_together/NicheLevelAnalysis_ssp45.png', height = 150, width = 250, dpi = 300, units = 'mm')
 
 ggplot() + geom_boxplot(data = Comb.Data[Comb.Data$Scenario == 'ssp85'&Comb.Data$Year == 2100,], aes(x = Depth, y = CRS, fill = Level)) + 
   scale_y_continuous(limits = c(minComb.CRS, maxComb.CRS), breaks = c(-4,-3,-2,-1,0,1)) +
@@ -707,7 +707,7 @@ ggplot() + geom_boxplot(data = Comb.Data[Comb.Data$Scenario == 'ssp85'&Comb.Data
   labs(fill = 'Analysis Level') + 
   theme(axis.text = element_text(size = 13), axis.title = element_text(size = 14, face = 'bold'), 
         strip.text.x = element_text(size = 10)) 
-ggsave(filename = 'Results/Plots/new_method_depth_together/NicheLevelAnalysis_ssp85.png', height = 150, width = 250, dpi = 300, units = 'mm')
+ggsave(filename = 'kingfish_required-files/Results/Plots/new_method_depth_together/NicheLevelAnalysis_ssp85.png', height = 150, width = 250, dpi = 300, units = 'mm')
 
 ##### PCA Results Plots ---- 
 # Copied code from 4_CRS computation scripts to create datasets of PCA results for each scenario and depth
@@ -715,7 +715,7 @@ env_startcol=9
 env_endcol=12
 refyear_start='1850-01-01'
 refyear_end='2000-12-31'
-# Coordinates <- read.csv('Results/Global_Coordinates.csv')
+# Coordinates <- read.csv('kingfish_required-files/Results/Global_Coordinates.csv')
 Coordinates$PopLab <- as.character(Coordinates$PopID)
 Coordinates$PopLab <- ifelse(Coordinates$PopLab == 'NE_Pacific', 'NEP', Coordinates$PopLab)
 Coordinates$PopLab <- ifelse(Coordinates$PopLab == 'NW_Pacific', 'NWP', Coordinates$PopLab)
@@ -727,7 +727,7 @@ dist$PopLab <- as.factor(dist$PopLab)
 depths = list(10,50,100,150)
 pops = list('NEP','NWP','SA','SIP')
 Colours <- Polychrome::createPalette(217, c("#ff0000", "#00ff00", "#0000ff"))
-load('Required Files/INLA_Res_Combined.RData')
+load('kingfish_required-files/Required Files/INLA_Res_Combined.RData')
 Full$PopLab <- as.character(Full$PopID)
 Full$PopLab <- ifelse(Full$PopLab == 'NE_Pacific', 'NEP', Full$PopLab)
 Full$PopLab <- ifelse(Full$PopLab == 'NW_Pacific', 'NWP', Full$PopLab)
@@ -833,7 +833,7 @@ for (m in 1:length(sp)) {
         facet_wrap(~PopLab) + ggtitle(paste0('Depths together future pca')) + theme(axis.text = element_text(size = 14), 
                                                                         axis.title = element_text(size = 17, face = 'bold'), 
                                                                         strip.text.x = element_text(size = 12)) 
-      ggsave(plot = pca_plot, filename=paste0('Results/Plots/new_method_depth_together/pca_data.png'), width = 300, height = 200, dpi = 300, units = 'mm')
+      ggsave(plot = pca_plot, filename=paste0('kingfish_required-files/Results/Plots/new_method_depth_together/pca_data.png'), width = 300, height = 200, dpi = 300, units = 'mm')
 
       var = get_pca_var(env.prcomp)
       fviz_contrib(env.prcomp, choice = "var", axes= 1, top=4)
