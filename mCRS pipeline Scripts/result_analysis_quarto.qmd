@@ -30,8 +30,9 @@ The `echo: false` option disables the printing of code (only output is displayed
 
 ## Load Required files and setup analysis file
 
-```{r}
-setwd('/home/ben/Documents/Projects/') # Set working directory to include all required files.
+```{r, setup, include=FALSE}
+knitr::opts_knit$set(root.dir = '/home/ben/Documents/Projects/')
+#setwd('/home/ben/Documents/Projects/') # Set working directory to include all required files.
 library(data.table)
 library(ggplot2)
 library(sf)
@@ -45,7 +46,8 @@ library(SIBER)
 library(distfree.cr)
 ```
 
-Load data files 
+Load data files
+
 ```{r}
 coordinates = read.csv("kingfish_required-files/Required Files/Global_Coordinates.csv") # Load coordinate point data 
 # Load results file for population level analyses for all depths
