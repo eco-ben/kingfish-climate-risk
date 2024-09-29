@@ -31,7 +31,7 @@ The `echo: false` option disables the printing of code (only output is displayed
 ## Load Required files and setup analysis file
 
 ```{r, setup, include=FALSE}
-knitr::opts_knit$set(root.dir = '/home/ben/Documents/Projects/')
+knitr::opts_knit$set(root.dir = 'c:/Users/grier/Documents/')
 #setwd('/home/ben/Documents/Projects/') # Set working directory to include all required files.
 library(data.table)
 library(ggplot2)
@@ -48,14 +48,165 @@ library(distfree.cr)
 
 Load data files
 
-```{r}
+```{r loading data files}
 coordinates = read.csv("kingfish_required-files/Required Files/Global_Coordinates.csv") # Load coordinate point data 
 # Load results file for population level analyses for all depths
 pop_all_depth_results <- read.csv('kingfish_required-files/Results/mCRS-DeltamCRS RAW/DeltaCRS_mCRS_RAW_depth_together.csv')
 # Load results file for species level analyses for all depths
 species_results = read.csv('kingfish_required-files/Results/mCRS-DeltamCRS RAW/DeltaCRS_mCRS_RAW_depth_together_SpL.csv')
+species_results$DeltaCRS = as.numeric(species_results$DeltaCRS)
 # Load results file for population level analyses for surface depth
 surface_results = read.csv("kingfish_required-files/Results/mCRS-DeltamCRS RAW/DeltaCRS_mCRS_RAW_surface_depth.csv")
+
+# Load environmental data 
+load('kingfish_required-files/Required Files/historical_stack_ensemble.RData')
+load('kingfish_required-files/Required Files/ssp26_stack_ensemble.RData')
+load('kingfish_required-files/Required Files/ssp45_stack_ensemble.RData')
+load('kingfish_required-files/Required Files/ssp85_stack_ensemble.RData')
+ENV <- list(historical.stack.ensemble, ssp26.stack.ensemble, ssp45.stack.ensemble, ssp85.stack.ensemble)
+ENV.summary <- rbindlist(ENV) #combine all data tables into one ENV
+rm(ENV,historical.stack.ensemble, ssp26.stack.ensemble, ssp45.stack.ensemble,ssp85.stack.ensemble, DataCollation)
+ENV.summary <- ENV.summary[!ENV.summary$Extract.ID %in% c('103', '204', '200', '111', '112','34', '52'),]
+ENV.summary.Y <- ENV.summary[,.(no3.mean = mean(no3), ph.mean = mean(ph), so.mean= mean(so), thetao.mean = mean(thetao)),by =.(Extract.ID,PopID,Year,Scenario,Depth)]
+ENV.PopSummary <- ENV.summary.Y[,.(no3.mean = mean(no3.mean), ph.mean = mean(ph.mean), so.mean= mean(so.mean), thetao.mean = mean(thetao.mean)),by =.(PopID,Year,Scenario,Depth)]
+ENV.PopSummary <- data.frame(ENV.PopSummary)
+ENV.PopSummary_long <- tidyr::pivot_longer(ENV.PopSummary, cols = c(5:8), names_to = c('Variable'), values_to = 'Values')
 ```
 
 Initial data processing of results files
+
+```{r initial processing}
+source("kingfish-climate-risk/mCRS pipeline Scripts/results_analysis_functions.R")
+pop_all_depth_results = preprocess_results_df(pop_all_depth_results, coordinates, "population_all_depths")
+
+species_results = preprocess_results_df(species_results, coordinates, "species")
+
+surface_results = preprocess_results_df(surface_results, coordinates, "surface_depth")
+
+combined_results = rbind(pop_all_depth_results, species_results, surface_results)
+```
+
+## Exploratory analysis of end-century results
+
+```{r exploratory plots}
+ggplot() + geom_boxplot(data = combined_results[combined_results$Year == 2100,], aes(x = Depth, y = CRS, color = Level)) + facet_wrap(~PopLab)
+
+ggplot() + geom_boxplot(data = combined_results[combined_results$Year == 2100,], aes(x = Depth, y = DeltaCRS, color = Level)) + facet_wrap(~PopLab)
+```
+
+## Identifying population-depth warming levels
+### Calculate Warming Levels
+```{r warming levels}
+# Mean temperature levels 
+meanTemp <- ENV.PopSummary[,c(1,2,3,4,8)]
+refmeanTemp <- meanTemp[meanTemp$Scenario == 'historical',] %>% group_by(PopID,Depth) %>% summarise(TempMean = mean(thetao.mean))
+meanTemp <- left_join(meanTemp, refmeanTemp, by = c('PopID', 'Depth'))
+meanTemp <- meanTemp %>% group_by(PopID,Depth,Year,Scenario) %>% reframe(DeltaTemp = (thetao.mean - TempMean))
+meanTemp26 <- meanTemp[meanTemp$Scenario %in% c('historical','ssp26'),]
+meanTemp45 <- meanTemp[meanTemp$Scenario %in% c('historical','ssp45'),]
+meanTemp85 <- meanTemp[meanTemp$Scenario %in% c('historical','ssp85'),]
+meanTemp26[meanTemp26$Scenario == 'historical',]$Scenario <- 'ssp26'
+meanTemp45[meanTemp45$Scenario == 'historical',]$Scenario <- 'ssp45'
+meanTemp85[meanTemp85$Scenario == 'historical',]$Scenario <- 'ssp85'
+meanTemp <- rbind(meanTemp26,meanTemp45,meanTemp85)
+meanTemp <- meanTemp[!meanTemp$Year <= 2000,]
+meanTemp$PopID <- as.factor(meanTemp$PopID)
+meanTemp$Depth <- as.factor(meanTemp$Depth)
+meanTemp$Scenario <- as.factor(meanTemp$Scenario)
+
+# Applying temperature GAM models 
+newTempGAM <- meanTemp[,c(1,2,3,4)]
+newTempGAM$DeltaTModelled <- 0
+ssps = list('ssp26', 'ssp45', 'ssp85')
+depths = list(10,50,100,150)
+pops = list('NE_Pacific','NW_Pacific','South_Africa','South_Pacific')
+
+## Population Specific Warming levels --
+for(i in 1:length(ssps)){
+  for(j in 1:length(depths)){
+    for(z in 1:length(pops)){
+      model <- mgcv::gam(DeltaTemp ~ s(Year), data = meanTemp[meanTemp$PopID == pops[z]&
+                                                                meanTemp$Depth == depths[j] &
+                                                                meanTemp$Scenario == ssps[i],])
+      newTempGAM[newTempGAM$Scenario == ssps[i]&
+                   newTempGAM$PopID == pops[z]&
+                   newTempGAM$Depth == depths[j],]$DeltaTModelled <- predict(model,
+                                                                             newTempGAM[newTempGAM$Scenario == ssps[i]&
+                                                                                       newTempGAM$PopID == pops[z]&
+                                                                                       newTempGAM$Depth == depths[j],])
+    }
+  }
+}
+
+# Find years when warming levels are reached for a given PopID and Depth 
+ssp26.0.75deg.Year <- as.data.frame(newTempGAM[newTempGAM$Scenario == 'ssp26',]) %>% filter(DeltaTModelled >= 0.75) %>% 
+  group_by(PopID, Depth, Scenario) %>% 
+  summarize(Warming.year = min(Year))
+ssp26.0.75deg.Year$Warming.level <- 0.75
+ssp45.1deg.Year <- as.data.frame(newTempGAM[newTempGAM$Scenario == 'ssp45',]) %>% filter(DeltaTModelled >= 1) %>% 
+  group_by(PopID, Depth, Scenario) %>% 
+  summarize(Warming.year = min(Year))
+ssp45.1deg.Year$Warming.level <- 1
+ssp85.1.75deg.Year <- as.data.frame(newTempGAM[newTempGAM$Scenario == 'ssp85',]) %>% filter(DeltaTModelled >= 1.75) %>% 
+  group_by(PopID, Depth, Scenario) %>% 
+  summarize(Warming.year = min(Year))
+ssp85.1.75deg.Year$Warming.level = 1.75
+Warming.levels <- rbind(ssp26.0.75deg.Year, ssp45.1deg.Year, ssp85.1.75deg.Year)
+Warming.levels$Depth <- as.factor(Warming.levels$Depth)
+
+# Filter results to include warming level years only
+Warmlevel.data <- left_join(pop_all_depth_results[!pop_all_depth_results$Scenario == 'historical',], Warming.levels, by = c('PopID','Depth','Scenario'))
+Warmlevel.data <- Warmlevel.data[Warmlevel.data$Year == Warmlevel.data$Warming.year,]
+```
+
+### Warming levels figures 
+```{r warming level figures}
+##### modelled temperature plots ----
+meanTemp$Depth <- as.factor(meanTemp$Depth)
+# axes ranges
+minTemp <- min(newTempGAM$DeltaTModelled)
+maxTemp <- max(newTempGAM$DeltaTModelled)
+#Pop names to labels for plotting
+Warming.levels$PopLab = Warming.levels$PopID
+Warming.levels = PopID_add_PopLab(Warming.levels)
+
+newTempGAM$PopLab = newTempGAM$PopID
+newTempGAM = PopID_add_PopLab(newTempGAM)
+
+meanTemp$PopLab = meanTemp$PopID
+meanTemp = PopID_add_PopLab(meanTemp)
+
+ggplot() +
+  geom_line(data = newTempGAM[newTempGAM$Scenario == 'ssp26',], aes(x = Year, y = DeltaTModelled, color = as.factor(Depth))) +
+  geom_line(data = meanTemp[meanTemp$Scenario == 'ssp26',],aes(x = Year, y = DeltaTemp, color = as.factor(Depth)), alpha = 0.2) +
+  geom_segment(data = Warming.levels[Warming.levels$Scenario == 'ssp26',],aes(x = Warming.year,y = minTemp,xend = Warming.year, yend = Warming.level), alpha = 0.4) + 
+  geom_segment(data = Warming.levels[Warming.levels$Scenario == 'ssp26'&Warming.levels$Depth ==150,],aes(x = 2001, y = Warming.level, xend = Warming.year, yend = Warming.level), alpha = 0.4) +
+  geom_point(data = Warming.levels[Warming.levels$Scenario == 'ssp26',], aes(x = Warming.year, y = Warming.level), alpha = 0.5, size = 2) +
+  scale_y_continuous(limits = c(minTemp, maxTemp)) + labs(color = 'Depth') + ylab('\u0394Temp (\u00b0C)') +
+  facet_wrap(~PopLab, nrow = 1) + theme_classic() + ggtitle('Population Temperature change - SSP1-2.6') + 
+  theme(axis.text = element_text(size = 9), axis.title = element_text(size = 14, face = 'bold'), 
+        strip.text.x = element_text(size = 10)) 
+#ggsave('kingfish_required-files/Results/Plots/new_method_depth_together/Modelled_TempChange_ssp26.png',height = 150, width = 300, dpi = 300, units = 'mm')
+ggplot() +
+  geom_line(data = newTempGAM[newTempGAM$Scenario == 'ssp45',], aes(x = Year, y = DeltaTModelled, color = as.factor(Depth))) +
+  geom_line(data = meanTemp[meanTemp$Scenario == 'ssp45',],aes(x = Year, y = DeltaTemp, color = as.factor(Depth)), alpha = 0.2) +
+  geom_segment(data = Warming.levels[Warming.levels$Scenario == 'ssp45',],aes(x = Warming.year,y = minTemp,xend = Warming.year, yend = Warming.level), alpha = 0.4) + 
+  geom_segment(data = Warming.levels[Warming.levels$Scenario == 'ssp45'&Warming.levels$Depth ==150,],aes(x = 2001, y = Warming.level, xend = Warming.year, yend = Warming.level), alpha = 0.4) +
+  geom_point(data = Warming.levels[Warming.levels$Scenario == 'ssp45',], aes(x = Warming.year, y = Warming.level), alpha = 0.5, size = 2) +
+  scale_y_continuous(limits = c(minTemp, maxTemp)) + labs(color = 'Depth') + ylab('\u0394Temp (\u00b0C)') +
+  facet_wrap(~PopLab, nrow = 1) + theme_classic() + ggtitle('Population Temperature change - SSP2-4.5') + 
+  theme(axis.text = element_text(size = 9), axis.title = element_text(size = 14, face = 'bold'), 
+        strip.text.x = element_text(size = 10)) 
+#ggsave('kingfish_required-files/Results/Plots/new_method_depth_together/Modelled_TempChange_ssp45.png',height = 150, width = 300, dpi = 300, units = 'mm')
+ggplot() +
+  geom_line(data = newTempGAM[newTempGAM$Scenario == 'ssp85',], aes(x = Year, y = DeltaTModelled, color = as.factor(Depth))) +
+  geom_line(data = meanTemp[meanTemp$Scenario == 'ssp85',],aes(x = Year, y = DeltaTemp, color = as.factor(Depth)), alpha = 0.2) +
+  geom_segment(data = Warming.levels[Warming.levels$Scenario == 'ssp85',],aes(x = Warming.year,y = minTemp,xend = Warming.year, yend = Warming.level), alpha = 0.4) + 
+  geom_segment(data = Warming.levels[Warming.levels$Scenario == 'ssp85'&Warming.levels$Depth ==150,],aes(x = 2001, y = Warming.level, xend = Warming.year, yend = Warming.level), alpha = 0.4) +
+  geom_point(data = Warming.levels[Warming.levels$Scenario == 'ssp85',], aes(x = Warming.year, y = Warming.level), alpha = 0.5, size = 2) +
+  scale_y_continuous(limits = c(minTemp, maxTemp)) + labs(color = 'Depth') + ylab('\u0394Temp (\u00b0C)') +
+  facet_wrap(~PopLab, nrow = 1) + theme_classic() + ggtitle('Population Temperature change - SSP5-8.5') + 
+  theme(axis.text = element_text(size = 9), axis.title = element_text(size = 14, face = 'bold'), 
+        strip.text.x = element_text(size = 10)) 
+#ggsave('kingfish_required-files/Results/Plots/new_method_depth_together/Modelled_TempChange_ssp85.png',height = 150, width = 300, dpi = 300, units = 'mm')
+```
