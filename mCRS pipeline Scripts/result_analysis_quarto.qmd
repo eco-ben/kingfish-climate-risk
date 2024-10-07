@@ -31,7 +31,7 @@ The `echo: false` option disables the printing of code (only output is displayed
 ## Load Required files and setup analysis file
 
 ```{r, setup, include=FALSE}
-knitr::opts_knit$set(root.dir = 'c:/Users/grier/Documents/')
+knitr::opts_knit$set(root.dir = 'c:/Users/grier/Documents/Projects/')
 #setwd('/home/ben/Documents/Projects/') # Set working directory to include all required files.
 library(data.table)
 library(ggplot2)
@@ -49,20 +49,20 @@ library(distfree.cr)
 Load data files
 
 ```{r loading data files}
-coordinates = read.csv("kingfish_required-files/Required Files/Global_Coordinates.csv") # Load coordinate point data 
+coordinates = read.csv("kingfish_data_dir/Required Files/Global_Coordinates.csv") # Load coordinate point data 
 # Load results file for population level analyses for all depths
-pop_all_depth_results <- read.csv('kingfish_required-files/Results/mCRS-DeltamCRS RAW/DeltaCRS_mCRS_RAW_depth_together.csv')
+pop_all_depth_results <- read.csv('kingfish_data_dir/Results/mCRS-DeltamCRS RAW/DeltaCRS_mCRS_RAW_depth_together.csv')
 # Load results file for species level analyses for all depths
-species_results = read.csv('kingfish_required-files/Results/mCRS-DeltamCRS RAW/DeltaCRS_mCRS_RAW_depth_together_SpL.csv')
+species_results = read.csv('kingfish_data_dir/Results/mCRS-DeltamCRS RAW/DeltaCRS_mCRS_RAW_depth_together_SpL.csv')
 species_results$DeltaCRS = as.numeric(species_results$DeltaCRS)
 # Load results file for population level analyses for surface depth
-surface_results = read.csv("kingfish_required-files/Results/mCRS-DeltamCRS RAW/DeltaCRS_mCRS_RAW_surface_depth.csv")
+surface_results = read.csv("kingfish_data_dir/Results/mCRS-DeltamCRS RAW/DeltaCRS_mCRS_RAW_surface_depth.csv")
 
 # Load environmental data 
-load('kingfish_required-files/Required Files/historical_stack_ensemble.RData')
-load('kingfish_required-files/Required Files/ssp26_stack_ensemble.RData')
-load('kingfish_required-files/Required Files/ssp45_stack_ensemble.RData')
-load('kingfish_required-files/Required Files/ssp85_stack_ensemble.RData')
+load('kingfish_data_dir/Required Files/historical_stack_ensemble.RData')
+load('kingfish_data_dir/Required Files/ssp26_stack_ensemble.RData')
+load('kingfish_data_dir/Required Files/ssp45_stack_ensemble.RData')
+load('kingfish_data_dir/Required Files/ssp85_stack_ensemble.RData')
 ENV <- list(historical.stack.ensemble, ssp26.stack.ensemble, ssp45.stack.ensemble, ssp85.stack.ensemble)
 ENV.summary <- rbindlist(ENV) #combine all data tables into one ENV
 rm(ENV,historical.stack.ensemble, ssp26.stack.ensemble, ssp45.stack.ensemble,ssp85.stack.ensemble, DataCollation)
@@ -95,27 +95,18 @@ ggplot() + geom_boxplot(data = combined_results[combined_results$Year == 2100,],
 ```
 
 ## Identifying population-depth warming levels
+
+To ensure result data are compared across consistent levels of future change results are calculated relative to local population-depth-level warming levels rather than a year value. Results values are reported and analysed at the year when a given population's temperature conditions reach a particular warming level for a future climate scenario. Therefore, results for each population are compared when that population and depth reach the same level of physical climate change impact, but this may not be at the same time.
+
 ### Calculate Warming Levels
+
 ```{r warming levels}
 # Mean temperature levels 
-meanTemp <- ENV.PopSummary[,c(1,2,3,4,8)]
-refmeanTemp <- meanTemp[meanTemp$Scenario == 'historical',] %>% group_by(PopID,Depth) %>% summarise(TempMean = mean(thetao.mean))
-meanTemp <- left_join(meanTemp, refmeanTemp, by = c('PopID', 'Depth'))
-meanTemp <- meanTemp %>% group_by(PopID,Depth,Year,Scenario) %>% reframe(DeltaTemp = (thetao.mean - TempMean))
-meanTemp26 <- meanTemp[meanTemp$Scenario %in% c('historical','ssp26'),]
-meanTemp45 <- meanTemp[meanTemp$Scenario %in% c('historical','ssp45'),]
-meanTemp85 <- meanTemp[meanTemp$Scenario %in% c('historical','ssp85'),]
-meanTemp26[meanTemp26$Scenario == 'historical',]$Scenario <- 'ssp26'
-meanTemp45[meanTemp45$Scenario == 'historical',]$Scenario <- 'ssp45'
-meanTemp85[meanTemp85$Scenario == 'historical',]$Scenario <- 'ssp85'
-meanTemp <- rbind(meanTemp26,meanTemp45,meanTemp85)
-meanTemp <- meanTemp[!meanTemp$Year <= 2000,]
-meanTemp$PopID <- as.factor(meanTemp$PopID)
-meanTemp$Depth <- as.factor(meanTemp$Depth)
-meanTemp$Scenario <- as.factor(meanTemp$Scenario)
+meanTemp <- ENV.PopSummary[,c("PopID","Year","Scenario","Depth","thetao.mean")]
+meanTemp = mean_Delta_temperature(meanTemp)
 
 # Applying temperature GAM models 
-newTempGAM <- meanTemp[,c(1,2,3,4)]
+newTempGAM <- meanTemp[,c("PopID","Depth","Year","Scenario")]
 newTempGAM$DeltaTModelled <- 0
 ssps = list('ssp26', 'ssp45', 'ssp85')
 depths = list(10,50,100,150)
@@ -155,11 +146,15 @@ Warming.levels <- rbind(ssp26.0.75deg.Year, ssp45.1deg.Year, ssp85.1.75deg.Year)
 Warming.levels$Depth <- as.factor(Warming.levels$Depth)
 
 # Filter results to include warming level years only
-Warmlevel.data <- left_join(pop_all_depth_results[!pop_all_depth_results$Scenario == 'historical',], Warming.levels, by = c('PopID','Depth','Scenario'))
-Warmlevel.data <- Warmlevel.data[Warmlevel.data$Year == Warmlevel.data$Warming.year,]
+warmlevel_data_all_depths <- left_join(pop_all_depth_results[!pop_all_depth_results$Scenario == 'historical',], Warming.levels, by = c('PopID','Depth','Scenario'))
+warmlevel_data_all_depths <- warmlevel_data_all_depths[warmlevel_data_all_depths$Year == warmlevel_data_all_depths$Warming.year,]
+
+warmlevel_data_surface <- left_join(surface_results[!surface_results$Scenario == 'historical',], Warming.levels, by = c('PopID','Depth','Scenario'))
+warmlevel_data_surface <- warmlevel_data_surface[warmlevel_data_surface$Year == warmlevel_data_surface$Warming.year,]
 ```
 
-### Warming levels figures 
+### Warming levels figures
+
 ```{r warming level figures}
 ##### modelled temperature plots ----
 meanTemp$Depth <- as.factor(meanTemp$Depth)
@@ -209,4 +204,78 @@ ggplot() +
   theme(axis.text = element_text(size = 9), axis.title = element_text(size = 14, face = 'bold'), 
         strip.text.x = element_text(size = 10)) 
 #ggsave('kingfish_required-files/Results/Plots/new_method_depth_together/Modelled_TempChange_ssp85.png',height = 150, width = 300, dpi = 300, units = 'mm')
+```
+
+## Comparing genetic-population and species level analyses
+
+Climate risk assessments are often performed at a species-level, without considering genetic differentiation between populations of the same species. Genetically and geographically distinct populations are likely to experience different levels of climate risk because they are adapted to distinct climate niches (Li L. et al., 2022; Smith et al., 2019; Angert et al., 2011).
+
+```{r genetic-population vs species level}
+min_comb_crs = min(combined_results[
+  combined_results$Level %in% c("population_all_depths", "species") &
+  combined_results$Year == 2100,
+  "CRS"
+  ]
+)
+max_comb_crs = max(combined_results[
+  combined_results$Level %in% c("population_all_depths", "species") &
+  combined_results$Year == 2100,
+  "CRS"
+  ]
+)
+
+ggplot() + geom_boxplot(data = combined_results[combined_results$Scenario == 'ssp26'&combined_results$Year == 2100 & combined_results$Level %in% c("population_all_depths", "species"),], aes(x = Depth, y = CRS, fill = Level)) + 
+  scale_y_continuous(limits = c(min_comb_crs, max_comb_crs), breaks = c(-4,-3,-2,-1,0,1)) +
+  theme_classic() + ggtitle('Niche Analysis Level - SSP1-2.6') + ylab('mCRS') +
+  labs(fill = 'Analysis Level') + 
+  theme(axis.text = element_text(size = 13), axis.title = element_text(size = 14, face = 'bold'), 
+        strip.text.x = element_text(size = 10)) 
+#ggsave(filename = 'kingfish_required-files/Results/Plots/new_method_depth_together/NicheLevelAnalysis_ssp26.png', height = 150, width = 250, dpi = 300, units = 'mm')
+
+ggplot() + geom_boxplot(data = combined_results[combined_results$Scenario == 'ssp45'&combined_results$Year == 2100 & combined_results$Level %in% c("population_all_depths", "species"),], aes(x = Depth, y = CRS, fill = Level)) + 
+  scale_y_continuous(limits = c(min_comb_crs, max_comb_crs), breaks = c(-4,-3,-2,-1,0,1)) +
+  theme_classic() + ggtitle('Niche Analysis Level - SSP2-4.5') + ylab('mCRS') +
+  labs(fill = 'Analysis Level') + 
+  theme(axis.text = element_text(size = 13), axis.title = element_text(size = 14, face = 'bold'), 
+        strip.text.x = element_text(size = 10)) 
+#ggsave(filename = 'kingfish_required-files/Results/Plots/new_method_depth_together/NicheLevelAnalysis_ssp45.png', height = 150, width = 250, dpi = 300, units = 'mm')
+
+ggplot() + geom_boxplot(data = combined_results[combined_results$Scenario == 'ssp85'&combined_results$Year == 2100 & combined_results$Level %in% c("population_all_depths", "species"),], aes(x = Depth, y = CRS, fill = Level)) + 
+  scale_y_continuous(limits = c(min_comb_crs, max_comb_crs), breaks = c(-4,-3,-2,-1,0,1)) +
+  theme_classic() + ggtitle('Niche Analysis Level - SSP5-8.5') + ylab('mCRS') +
+  labs(fill = 'Analysis Level') + 
+  theme(axis.text = element_text(size = 13), axis.title = element_text(size = 14, face = 'bold'), 
+        strip.text.x = element_text(size = 10)) 
+#ggsave(filename = 'kingfish_required-files/Results/Plots/new_method_depth_together/NicheLevelAnalysis_ssp85.png', height = 150, width = 250, dpi = 300, units = 'mm')
+
+```
+
+## Comparing adult-all depths and dispersal-surface life stages (at warming level years)
+```{r comparing all depths and surface results}
+depth_comparison_data = rbind(warmlevel_data_all_depths, warmlevel_data_surface)
+
+min_depth_crs = min(depth_comparison_data$CRS)
+max_depth_crs = max(depth_comparison_data$CRS)
+
+ggplot() + geom_boxplot(data = depth_comparison_data[depth_comparison_data$Scenario == 'ssp26',], aes(x = Depth, y = CRS, fill = Level)) + 
+  #scale_y_continuous(limits = c(min_depth_crs, max_depth_crs), breaks = c(-4,-3,-2,-1,0,1)) +
+  theme_classic() + ggtitle('Life Stage Depths - SSP1-2.6') + ylab('mCRS') +
+  labs(fill = 'Life Stage Depths') + 
+  theme(axis.text = element_text(size = 13), axis.title = element_text(size = 14, face = 'bold'), 
+        strip.text.x = element_text(size = 10)) + facet_wrap(~PopID) 
+
+ggplot() + geom_boxplot(data = depth_comparison_data[depth_comparison_data$Scenario == 'ssp45',], aes(x = Depth, y = CRS, fill = Level)) + 
+  #scale_y_continuous(limits = c(min_depth_crs, max_depth_crs), breaks = c(-4,-3,-2,-1,0,1)) +
+  theme_classic() + ggtitle('Life Stage Depths - SSP2-4.5') + ylab('mCRS') +
+  labs(fill = 'Life Stage Depths') + 
+  theme(axis.text = element_text(size = 13), axis.title = element_text(size = 14, face = 'bold'), 
+        strip.text.x = element_text(size = 10)) + facet_wrap(~PopID) 
+
+ggplot() + geom_boxplot(data = depth_comparison_data[depth_comparison_data$Scenario == 'ssp85',], aes(x = Depth, y = CRS, fill = Level)) + 
+  #scale_y_continuous(limits = c(min_depth_crs, max_depth_crs), breaks = c(-4,-3,-2,-1,0,1)) +
+  theme_classic() + ggtitle('Life Stage Depths - SSP5-8.5') + ylab('mCRS') +
+  labs(fill = 'Life Stage Depths') + 
+  theme(axis.text = element_text(size = 13), axis.title = element_text(size = 14, face = 'bold'), 
+        strip.text.x = element_text(size = 10)) + facet_wrap(~PopID) 
+
 ```

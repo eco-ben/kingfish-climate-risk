@@ -1,4 +1,4 @@
-setwd('/home/ben/Documents/Projects/kingfish-climate/')
+setwd('c:/Users/grier/Documents/Projects/kingfish_data_dir')
 library(data.table)
 library(ggplot2)
 
@@ -11,7 +11,7 @@ PremeanDT <- data.table()
 #                'CRS.ssp85.150m.ensemble','CRS.ssp85.50m.ensemble') 
 
 for(i in 1:length(csv)){
-  csv[[i]] <- paste0('Results/mCRS-DeltamCRS RAW/depth-together/',csv[[i]])
+  csv[[i]] <- paste0('Results/mCRS-DeltamCRS RAW/surface_depth/',csv[[i]])
 }
 
 new_dts <- list()
@@ -30,8 +30,8 @@ for(i in 1:length(csv)){
   dt <- dt[, .(DeltaCRS = (CRS - CRS.refmean)), by = .(Extract_ID, PopID,Date, Year, Scenario, CRS)]
   Popmeans <- dt[,.(DeltaCRS.Popmean = mean(DeltaCRS),CRS.Popmean = mean(CRS)),by=.(PopID,Extract_ID,Year, Scenario)]
   Popmeans <- Popmeans[,.(DeltaCRS.Popmean = mean(DeltaCRS.Popmean),CRS.Popmean = mean(CRS.Popmean),Sample.size = nrow(Popmeans)),by=.(PopID,Year, Scenario)]
-  Popmeans$Depth <- strsplit(strsplit(csv[[i]], '_')[[1]][5], 'm.')[[1]][1]
-  dt$Depth <- strsplit(strsplit(csv[[i]], '_')[[1]][5], 'm.')[[1]][1]
+  Popmeans$Depth <- strsplit(strsplit(csv[[i]], '_')[[1]][6], 'm.')[[1]][1]
+  dt$Depth <- strsplit(strsplit(csv[[i]], '_')[[1]][6], 'm.')[[1]][1]
   #Popmeans$Scenario <- stringr::str_extract(dt.name,"ssp\\d+")
   Popmeans$PopID_Depth <- factor(paste(Popmeans$PopID, Popmeans$Depth, sep = "-"))
   new_dts[[i]] <- Popmeans

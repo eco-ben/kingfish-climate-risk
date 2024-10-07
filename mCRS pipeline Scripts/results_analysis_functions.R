@@ -32,3 +32,28 @@ PopID_add_PopLab = function(x){
   return(x)
 }
   
+mean_Delta_temperature = function(x){
+  # Calculate the mean historical temperature each population and depth is exposed to. 
+  refmeanTemp <- x[x$Scenario == 'historical',] %>% group_by(PopID,Depth) %>% summarise(TempMean = mean(thetao.mean))
+  temp_and_ref <- left_join(x, refmeanTemp, by = c('PopID', 'Depth'))
+  
+  # Calculate the change in temperature from historical mean
+  temp_and_ref <- temp_and_ref %>% group_by(PopID,Depth,Year,Scenario) %>% reframe(DeltaTemp = (thetao.mean - TempMean))
+  
+  # Attach historical data to each scenario and relabel
+  ssp26 <- temp_and_ref[temp_and_ref$Scenario %in% c('historical','ssp26'),]
+  ssp45 <- temp_and_ref[temp_and_ref$Scenario %in% c('historical','ssp45'),]
+  ssp85 <- temp_and_ref[temp_and_ref$Scenario %in% c('historical','ssp85'),]
+  ssp26[ssp26$Scenario == 'historical',]$Scenario <- 'ssp26'
+  ssp45[ssp45$Scenario == 'historical',]$Scenario <- 'ssp45'
+  ssp85[ssp85$Scenario == 'historical',]$Scenario <- 'ssp85'
+  
+  # Combine all scenarios' data 
+  all_scens <- rbind(ssp26,ssp45,ssp85)
+  all_scens <- all_scens[!all_scens$Year <= 2000,]
+  all_scens$PopID <- as.factor(all_scens$PopID)
+  all_scens$Depth <- as.factor(all_scens$Depth)
+  all_scens$Scenario <- as.factor(all_scens$Scenario)
+  
+  return(all_scens)
+}

@@ -1,4 +1,17 @@
 using CSV, DataFrames, ArchGDAL, MultivariateStats, RData, Dates, Statistics, RCall, Distances, FLoops
+using TOML
+
+try
+    global CONFIG = TOML.parsefile(".config.toml")
+catch err
+    if occursin("No such file", string(err))
+        @info "Configuration file `.config.toml` not found. See README for instructions."
+    end
+
+    rethrow(err)
+end
+
+DATA_DIR = CONFIG["KINGFISH_DATA_DIR"]["DATA_DIR"]
 
 function CRS_computation_depth_together(
     dist, 
