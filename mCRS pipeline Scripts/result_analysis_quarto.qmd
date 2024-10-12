@@ -1,32 +1,19 @@
 ---
-title: "Paper_result_analysis"
+title: "Paper Result Analysis"
 author: "Benjamin Grier"
-format: html
+format: 
+  html:
+    toc: true
+    code-links:
+      - text: Analysis and plotting functions
+        icon: file-code
+        href: https://github.com/BG-AIMS/kingfish-climate-risk/blob/main/mCRS%20pipeline%20Scripts/results_analysis_functions.R
+    embed-resources: true
+    
 editor: visual
 ---
 
-## Quarto
-
-Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
-
-## Running Code
-
-When you click the **Render** button a document will be generated that includes both content and the output of embedded code. You can embed code like this:
-
-```{r}
-1 + 1
-```
-
-You can add options to executable code like this
-
-```{r}
-#| echo: false
-2 * 2
-```
-
-The `echo: false` option disables the printing of code (only output is displayed).
-
-# Climate Risk Assessment for Yellowtail Kingfish - Statistical Analysis
+Climate Risk Assessment for Yellowtail Kingfish - Statistical Analysis
 
 ## Load Required files and setup analysis file
 
@@ -39,6 +26,7 @@ library(sf)
 library(ggpubr)
 library(maps)
 library(dplyr)
+options(dplyr.summarise.inform = FALSE)
 library(scico)
 library(nlme)
 library(emmeans)
@@ -71,6 +59,9 @@ ENV.summary.Y <- ENV.summary[,.(no3.mean = mean(no3), ph.mean = mean(ph), so.mea
 ENV.PopSummary <- ENV.summary.Y[,.(no3.mean = mean(no3.mean), ph.mean = mean(ph.mean), so.mean= mean(so.mean), thetao.mean = mean(thetao.mean)),by =.(PopID,Year,Scenario,Depth)]
 ENV.PopSummary <- data.frame(ENV.PopSummary)
 ENV.PopSummary_long <- tidyr::pivot_longer(ENV.PopSummary, cols = c(5:8), names_to = c('Variable'), values_to = 'Values')
+
+# Load INLA spatio-temporal model results
+load("kingfish_data_dir/Required Files/INLA_Res_Combined.RData")
 ```
 
 Initial data processing of results files
@@ -88,11 +79,19 @@ combined_results = rbind(pop_all_depth_results, species_results, surface_results
 
 ## Exploratory analysis of end-century results
 
-```{r exploratory plots}
-ggplot() + geom_boxplot(data = combined_results[combined_results$Year == 2100,], aes(x = Depth, y = CRS, color = Level)) + facet_wrap(~PopLab)
+::: panel-tabset
+## CRS
 
+```{r exploratory CRS}
+ggplot() + geom_boxplot(data = combined_results[combined_results$Year == 2100,], aes(x = Depth, y = CRS, color = Level)) + facet_wrap(~PopLab)
+```
+
+## 𝚫CRS
+
+```{r exploratory DeltaCRS}
 ggplot() + geom_boxplot(data = combined_results[combined_results$Year == 2100,], aes(x = Depth, y = DeltaCRS, color = Level)) + facet_wrap(~PopLab)
 ```
+:::
 
 ## Identifying population-depth warming levels
 
@@ -170,7 +169,12 @@ newTempGAM = PopID_add_PopLab(newTempGAM)
 
 meanTemp$PopLab = meanTemp$PopID
 meanTemp = PopID_add_PopLab(meanTemp)
+```
 
+::: panel-tabset
+## SSP1-2.6
+
+```{r Warming Levels SSP1-2.6}
 ggplot() +
   geom_line(data = newTempGAM[newTempGAM$Scenario == 'ssp26',], aes(x = Year, y = DeltaTModelled, color = as.factor(Depth))) +
   geom_line(data = meanTemp[meanTemp$Scenario == 'ssp26',],aes(x = Year, y = DeltaTemp, color = as.factor(Depth)), alpha = 0.2) +
@@ -181,7 +185,11 @@ ggplot() +
   facet_wrap(~PopLab, nrow = 1) + theme_classic() + ggtitle('Population Temperature change - SSP1-2.6') + 
   theme(axis.text = element_text(size = 9), axis.title = element_text(size = 14, face = 'bold'), 
         strip.text.x = element_text(size = 10)) 
-#ggsave('kingfish_required-files/Results/Plots/new_method_depth_together/Modelled_TempChange_ssp26.png',height = 150, width = 300, dpi = 300, units = 'mm')
+```
+
+## SSP2-4.5
+
+```{r Warming Levels SSP2-4.5}
 ggplot() +
   geom_line(data = newTempGAM[newTempGAM$Scenario == 'ssp45',], aes(x = Year, y = DeltaTModelled, color = as.factor(Depth))) +
   geom_line(data = meanTemp[meanTemp$Scenario == 'ssp45',],aes(x = Year, y = DeltaTemp, color = as.factor(Depth)), alpha = 0.2) +
@@ -192,7 +200,11 @@ ggplot() +
   facet_wrap(~PopLab, nrow = 1) + theme_classic() + ggtitle('Population Temperature change - SSP2-4.5') + 
   theme(axis.text = element_text(size = 9), axis.title = element_text(size = 14, face = 'bold'), 
         strip.text.x = element_text(size = 10)) 
-#ggsave('kingfish_required-files/Results/Plots/new_method_depth_together/Modelled_TempChange_ssp45.png',height = 150, width = 300, dpi = 300, units = 'mm')
+```
+
+## SSP5-8.5
+
+```{r Warming Levels SSP5-8.5}
 ggplot() +
   geom_line(data = newTempGAM[newTempGAM$Scenario == 'ssp85',], aes(x = Year, y = DeltaTModelled, color = as.factor(Depth))) +
   geom_line(data = meanTemp[meanTemp$Scenario == 'ssp85',],aes(x = Year, y = DeltaTemp, color = as.factor(Depth)), alpha = 0.2) +
@@ -203,8 +215,8 @@ ggplot() +
   facet_wrap(~PopLab, nrow = 1) + theme_classic() + ggtitle('Population Temperature change - SSP5-8.5') + 
   theme(axis.text = element_text(size = 9), axis.title = element_text(size = 14, face = 'bold'), 
         strip.text.x = element_text(size = 10)) 
-#ggsave('kingfish_required-files/Results/Plots/new_method_depth_together/Modelled_TempChange_ssp85.png',height = 150, width = 300, dpi = 300, units = 'mm')
 ```
+:::
 
 ## Comparing genetic-population and species level analyses
 
@@ -223,59 +235,190 @@ max_comb_crs = max(combined_results[
   "CRS"
   ]
 )
+```
 
+::: panel-tabset
+## SSP1-2.6
+
+```{r species comparison SSP1-2.6}
 ggplot() + geom_boxplot(data = combined_results[combined_results$Scenario == 'ssp26'&combined_results$Year == 2100 & combined_results$Level %in% c("population_all_depths", "species"),], aes(x = Depth, y = CRS, fill = Level)) + 
   scale_y_continuous(limits = c(min_comb_crs, max_comb_crs), breaks = c(-4,-3,-2,-1,0,1)) +
   theme_classic() + ggtitle('Niche Analysis Level - SSP1-2.6') + ylab('mCRS') +
   labs(fill = 'Analysis Level') + 
   theme(axis.text = element_text(size = 13), axis.title = element_text(size = 14, face = 'bold'), 
         strip.text.x = element_text(size = 10)) 
-#ggsave(filename = 'kingfish_required-files/Results/Plots/new_method_depth_together/NicheLevelAnalysis_ssp26.png', height = 150, width = 250, dpi = 300, units = 'mm')
+```
 
+## SSP2-4.5
+
+```{r species comparison SSP2-4.5}
 ggplot() + geom_boxplot(data = combined_results[combined_results$Scenario == 'ssp45'&combined_results$Year == 2100 & combined_results$Level %in% c("population_all_depths", "species"),], aes(x = Depth, y = CRS, fill = Level)) + 
   scale_y_continuous(limits = c(min_comb_crs, max_comb_crs), breaks = c(-4,-3,-2,-1,0,1)) +
   theme_classic() + ggtitle('Niche Analysis Level - SSP2-4.5') + ylab('mCRS') +
   labs(fill = 'Analysis Level') + 
   theme(axis.text = element_text(size = 13), axis.title = element_text(size = 14, face = 'bold'), 
         strip.text.x = element_text(size = 10)) 
-#ggsave(filename = 'kingfish_required-files/Results/Plots/new_method_depth_together/NicheLevelAnalysis_ssp45.png', height = 150, width = 250, dpi = 300, units = 'mm')
+```
 
+## SSP5-8.5
+
+```{r species comparison SSP5-8.5}
 ggplot() + geom_boxplot(data = combined_results[combined_results$Scenario == 'ssp85'&combined_results$Year == 2100 & combined_results$Level %in% c("population_all_depths", "species"),], aes(x = Depth, y = CRS, fill = Level)) + 
   scale_y_continuous(limits = c(min_comb_crs, max_comb_crs), breaks = c(-4,-3,-2,-1,0,1)) +
   theme_classic() + ggtitle('Niche Analysis Level - SSP5-8.5') + ylab('mCRS') +
   labs(fill = 'Analysis Level') + 
   theme(axis.text = element_text(size = 13), axis.title = element_text(size = 14, face = 'bold'), 
         strip.text.x = element_text(size = 10)) 
-#ggsave(filename = 'kingfish_required-files/Results/Plots/new_method_depth_together/NicheLevelAnalysis_ssp85.png', height = 150, width = 250, dpi = 300, units = 'mm')
-
 ```
+:::
+
+These plots show that climate risk scores are higher and have greater variation when populations are assessed separately as genetically-distinct populations rather than as a species. This is due to the reduced environmental conditions that the historical niche of each population incorporates compared to the historical niche of the species as a whole. If *S. lalandi* were assessed at a species level only, future climate risk levels may be underestimated, particularly under more severe future climate scenarios.
 
 ## Comparing adult-all depths and dispersal-surface life stages (at warming level years)
+
 ```{r comparing all depths and surface results}
 depth_comparison_data = rbind(warmlevel_data_all_depths, warmlevel_data_surface)
 
 min_depth_crs = min(depth_comparison_data$CRS)
 max_depth_crs = max(depth_comparison_data$CRS)
+```
 
+::: panel-tabset
+## SSP1-2.6
+
+```{r surface comparison SSP1-2.6}
 ggplot() + geom_boxplot(data = depth_comparison_data[depth_comparison_data$Scenario == 'ssp26',], aes(x = Depth, y = CRS, fill = Level)) + 
   #scale_y_continuous(limits = c(min_depth_crs, max_depth_crs), breaks = c(-4,-3,-2,-1,0,1)) +
   theme_classic() + ggtitle('Life Stage Depths - SSP1-2.6') + ylab('mCRS') +
   labs(fill = 'Life Stage Depths') + 
   theme(axis.text = element_text(size = 13), axis.title = element_text(size = 14, face = 'bold'), 
         strip.text.x = element_text(size = 10)) + facet_wrap(~PopID) 
+```
 
+## SSP2-4.5
+
+```{r surface comparison 2-4.5}
 ggplot() + geom_boxplot(data = depth_comparison_data[depth_comparison_data$Scenario == 'ssp45',], aes(x = Depth, y = CRS, fill = Level)) + 
   #scale_y_continuous(limits = c(min_depth_crs, max_depth_crs), breaks = c(-4,-3,-2,-1,0,1)) +
   theme_classic() + ggtitle('Life Stage Depths - SSP2-4.5') + ylab('mCRS') +
   labs(fill = 'Life Stage Depths') + 
   theme(axis.text = element_text(size = 13), axis.title = element_text(size = 14, face = 'bold'), 
         strip.text.x = element_text(size = 10)) + facet_wrap(~PopID) 
+```
 
+## SSP5-8.5
+
+```{r surface comparison 5-8.5}
 ggplot() + geom_boxplot(data = depth_comparison_data[depth_comparison_data$Scenario == 'ssp85',], aes(x = Depth, y = CRS, fill = Level)) + 
   #scale_y_continuous(limits = c(min_depth_crs, max_depth_crs), breaks = c(-4,-3,-2,-1,0,1)) +
   theme_classic() + ggtitle('Life Stage Depths - SSP5-8.5') + ylab('mCRS') +
   labs(fill = 'Life Stage Depths') + 
   theme(axis.text = element_text(size = 13), axis.title = element_text(size = 14, face = 'bold'), 
         strip.text.x = element_text(size = 10)) + facet_wrap(~PopID) 
-
 ```
+:::
+
+The substantially higher climate risk scores when surface depths are analysed separately, compared with all populations being assessed suggests that the *Seriola lalandi* egg-dispersal life stage is most at risk. *S. lalandi* eggs are positively bouyant (Moran et al., 2007), putting this life stage at greater risk.
+
+The large differences in analysis results is due to the combination of depth levels in the `population_all_depths` analysis. Combining the depths together leads to the strong future nitrate changes at deep depths (100-150m) masking the surface changes. This leads to the populations experiencing the greatest climate risk/magnitudes of climate change at deep depths. However, when surface data is assessed separately (as a proxy for the conditions *S. lalandi* eggs may experience) the high level of climate impact on dispersal life stages becomes clear.
+
+## Geographic patterns of Climate Risk Scores
+
+```{r Geographic patterns of CRS}
+all_depths_sf <- st_as_sf(warmlevel_data_all_depths, coords = c(8,9), crs = 4326) # make sf object to use in DeltaCRS mapping 
+
+minDcrs = min(all_depths_sf$DeltaCRS)
+maxDcrs = max(all_depths_sf$DeltaCRS)
+
+BB_list = list(list(rbind(c(50,-15), c(50,-40), c(0,-40), c(0,-15), c(50,-15))),
+               list(rbind(c(285,10), c(200,10), c(200, 40), c(285,40), c(285,10))),
+               list(rbind(c(115,25), c(150,25), c(150, 45), c(115,45), c(115,25))),
+               list(rbind(c(100,-5),c(100,-60),c(300,-60),c(300,-5),c(100,-5))))
+Boxes <- st_multipolygon(BB_list)
+Boxes <- st_sfc(Boxes, crs = 4326)
+Boxes_360 <- st_shift_longitude(Boxes)
+Warmlevel.data_360 <- st_shift_longitude(all_depths_sf)
+World <- st_read('kingfish_data_dir/Required Files/GIS/ne_10m_land.shp', quiet=TRUE)
+World_360 <- sf::st_as_sf(map('world2', plot = FALSE, fill = TRUE))
+
+Test <- ggplot() + 
+  geom_sf(data = World_360) +
+  geom_sf(data =  Warmlevel.data_360[Warmlevel.data_360$Depth == 10 & Warmlevel.data_360$Scenario == 'ssp85',], aes(color = DeltaCRS), size = 2, alpha = 0.6) +
+  theme_void() + theme(legend.position = "right") + 
+  scale_color_scico(palette = 'batlow', midpoint = 0, limits = c(minDcrs, maxDcrs)) + labs(color = '\u0394mCRS') + 
+  theme(legend.position = 'bottom')
+leg <- ggpubr::get_legend(Test)
+```
+
+::: panel-tabset
+## SSP1-2.6
+
+```{r DeltaCRS Map SSP1-2.6}
+plot(DeltamCRSMap(Scenario = "ssp26"))
+```
+
+## SSP2-4.5
+
+```{r DeltaCRS Map SSP2-4.5}
+plot(DeltamCRSMap(Scenario = "ssp45"))
+```
+
+## SSP5-8.5
+
+```{r DeltaCRS Map SSP5-8.5}
+plot(DeltamCRSMap(Scenario = "ssp85"))
+```
+:::
+
+Differences in 𝚫CRS between locations increase as the climate scenario increases in severity.
+
+Main regions of low 𝚫CRS compared to surrounding regions are:
+
+-   Northern extents of the Australian range
+-   North-East Pacific population
+-   Eastern extents of the South African population
+
+Main regions of high 𝚫CRS compared to surrounding regions are:
+
+-   Northern New Zealand ranges
+-   South-Eastern Australian ranges
+-   South Pacific locations
+
+## Exploratory PCA plots
+
+```{R PCA plots}
+env_startcol=9
+env_endcol=12
+refyear_start="1850-01-01"
+refyear_end="2000-01-01"
+scenario="ssp85"
+```
+
+::: panel-tabset
+## All Depths Together
+
+```{r PCA All Depths Together}
+plot(PCA_plotting(
+  coordinates[,c(9,4)],
+  ENV.summary[ENV.summary$Scenario %in% c("historical", scenario),],
+  scenario, env_startcol, env_endcol, refyear_start, refyear_end,
+  "All depths together PCA"
+))
+```
+
+## Surface Level
+
+```{r PCA Surface Level}
+plot(PCA_plotting(
+  coordinates[,c(9,4)],
+  ENV.summary[ENV.summary$Scenario %in% c("historical", scenario) & ENV.summary$Depth == 10,],
+  scenario, env_startcol, env_endcol, refyear_start, refyear_end,
+  "Surface level PCA",
+  method="surface"
+))
+```
+:::
+
+The PCA values (data from which CRS are calculated) when assessing all depths together show that the main change in conditions is towards greater nitrate concentration and salinity (i.e. conditions are moving towards the bottom right of the plot).
+
+However, when assessing the surface level separately the PCA values show the main change in conditions occurring towards greater temperature and lower pH (sea surface warming and acidification). These are key environmental shifts that are likely to affect egg-dispersal life stages disproportionately compared to other life stages such as juvenile or adult *S. lalandi*, that move across a depth range.
