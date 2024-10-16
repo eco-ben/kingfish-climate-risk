@@ -272,6 +272,41 @@ ggplot() + geom_boxplot(data = combined_results[combined_results$Scenario == 'ss
 ```
 :::
 
+:::{.panel-tabset}
+## SSP1-2.6
+
+```{r species comparison - aggregated SSP1-2.6}
+ggplot() + geom_boxplot(data = combined_results[combined_results$Scenario == 'ssp26'&combined_results$Year == 2100 & combined_results$Level %in% c("population_all_depths", "species"),], aes(x = Level, y = CRS, fill = Level)) + 
+  scale_y_continuous(limits = c(min_comb_crs, max_comb_crs), breaks = c(-4,-3,-2,-1,0,1)) +
+  theme_classic() + ggtitle('Niche Analysis Level - SSP1-2.6') + ylab('mCRS') +
+  labs(fill = 'Analysis Level') + 
+  theme(axis.text = element_text(size = 13), axis.title = element_text(size = 14, face = 'bold'), 
+        strip.text.x = element_text(size = 10)) 
+```
+
+## SSP2-4.5
+
+```{r species comparison - aggregated SSP2-4.5}
+ggplot() + geom_boxplot(data = combined_results[combined_results$Scenario == 'ssp45'&combined_results$Year == 2100 & combined_results$Level %in% c("population_all_depths", "species"),], aes(x = Level, y = CRS, fill = Level)) + 
+  scale_y_continuous(limits = c(min_comb_crs, max_comb_crs), breaks = c(-4,-3,-2,-1,0,1)) +
+  theme_classic() + ggtitle('Niche Analysis Level - SSP2-4.5') + ylab('mCRS') +
+  labs(fill = 'Analysis Level') + 
+  theme(axis.text = element_text(size = 13), axis.title = element_text(size = 14, face = 'bold'), 
+        strip.text.x = element_text(size = 10)) 
+```
+
+## SSP5-8.5
+
+```{r species comparison - aggregated SSP5-8.5}
+ggplot() + geom_boxplot(data = combined_results[combined_results$Scenario == 'ssp85'&combined_results$Year == 2100 & combined_results$Level %in% c("population_all_depths", "species"),], aes(x = Level, y = CRS, fill = Level)) + 
+  scale_y_continuous(limits = c(min_comb_crs, max_comb_crs), breaks = c(-4,-3,-2,-1,0,1)) +
+  theme_classic() + ggtitle('Niche Analysis Level - SSP5-8.5') + ylab('mCRS') +
+  labs(fill = 'Analysis Level') + 
+  theme(axis.text = element_text(size = 13), axis.title = element_text(size = 14, face = 'bold'), 
+        strip.text.x = element_text(size = 10)) 
+```
+:::
+
 These plots show that climate risk scores are higher and have greater variation when populations are assessed separately as genetically-distinct populations rather than as a species. This is due to the reduced environmental conditions that the historical niche of each population incorporates compared to the historical niche of the species as a whole. If *S. lalandi* were assessed at a species level only, future climate risk levels may be underestimated, particularly under more severe future climate scenarios.
 
 ## Comparing adult-all depths and dispersal-surface life stages (at warming level years)

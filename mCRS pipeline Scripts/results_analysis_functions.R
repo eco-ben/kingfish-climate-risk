@@ -188,3 +188,27 @@ DeltamCRSMap <- function(Scenario){
 
   return(final)
 }
+
+append_historical = function(x){
+  # Attach historical data to each scenario and relabel
+  ssp26 <- x[x$Scenario %in% c('historical','ssp26'),]
+  ssp45 <- x[x$Scenario %in% c('historical','ssp45'),]
+  ssp85 <- x[x$Scenario %in% c('historical','ssp85'),]
+  ssp26[ssp26$Scenario == 'historical',]$Scenario <- 'ssp26'
+  ssp45[ssp45$Scenario == 'historical',]$Scenario <- 'ssp45'
+  ssp85[ssp85$Scenario == 'historical',]$Scenario <- 'ssp85'
+  
+  # Combine all scenarios' data 
+  all_scens <- rbind(ssp26,ssp45,ssp85)
+  all_scens$PopID <- as.factor(all_scens$PopID)
+  all_scens$Depth <- as.factor(all_scens$Depth)
+  all_scens$Scenario <- as.factor(all_scens$Scenario)
+  
+  return(all_scens)
+}
+
+normalise = function(x){
+  x = (x-min(x)) / (max(x) - min(x))
+
+  return(x)  
+}
