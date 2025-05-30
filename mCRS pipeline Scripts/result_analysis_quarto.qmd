@@ -60,6 +60,15 @@ ENV.PopSummary <- ENV.summary.Y[,.(no3.mean = mean(no3.mean), ph.mean = mean(ph.
 ENV.PopSummary <- data.frame(ENV.PopSummary)
 ENV.PopSummary_long <- tidyr::pivot_longer(ENV.PopSummary, cols = c(5:8), names_to = c('Variable'), values_to = 'Values')
 
+ENV.summary <- ENV.summary %>%
+    mutate(PopID = case_when(
+            PopID == "NE_Pacific" ~ "NEP",
+            PopID == "NW_Pacific" ~ "NWP",
+            PopID == "South_Pacific" ~ "SP",
+            PopID == "South_Africa" ~ "SA"
+        )
+    )
+
 # Load INLA spatio-temporal model results
 load("kingfish_data_dir/Required Files/INLA_Res_Combined.RData")
 ```
@@ -68,13 +77,23 @@ Initial data processing of results files
 
 ```{r initial processing}
 source("kingfish-climate-risk/mCRS pipeline Scripts/results_analysis_functions.R")
-pop_all_depth_results = preprocess_results_df(pop_all_depth_results, coordinates, "population_all_depths")
+pop_all_depth_results = preprocess_results_df(pop_all_depth_results, coordinates, "population")
 
 species_results = preprocess_results_df(species_results, coordinates, "species")
 
-surface_results = preprocess_results_df(surface_results, coordinates, "surface_depth")
+surface_results = preprocess_results_df(surface_results, coordinates, "surface")
 
 combined_results = rbind(pop_all_depth_results, species_results, surface_results)
+
+combined_results <- combined_results %>%
+    mutate(PopID = case_when(
+            PopID == "NE_Pacific" ~ "NEP",
+            PopID == "NW_Pacific" ~ "NWP",
+            PopID == "South_Pacific" ~ "SP",
+            PopID == "South_Africa" ~ "SA"
+        )
+    )
+
 ```
 
 ## Exploratory analysis of end-century results
@@ -224,13 +243,13 @@ Climate risk assessments are often performed at a species-level, without conside
 
 ```{r genetic-population vs species level}
 min_comb_crs = min(combined_results[
-  combined_results$Level %in% c("population_all_depths", "species") &
+  combined_results$Level %in% c("population", "species") &
   combined_results$Year == 2100,
   "CRS"
   ]
 )
 max_comb_crs = max(combined_results[
-  combined_results$Level %in% c("population_all_depths", "species") &
+  combined_results$Level %in% c("population", "species") &
   combined_results$Year == 2100,
   "CRS"
   ]
@@ -241,34 +260,37 @@ max_comb_crs = max(combined_results[
 ## SSP1-2.6
 
 ```{r species comparison SSP1-2.6}
-ggplot() + geom_boxplot(data = combined_results[combined_results$Scenario == 'ssp26'&combined_results$Year == 2100 & combined_results$Level %in% c("population_all_depths", "species"),], aes(x = Depth, y = CRS, fill = Level)) + 
+ggplot() + geom_boxplot(data = combined_results[combined_results$Scenario == 'ssp26'&combined_results$Year == 2100 & combined_results$Level %in% c("population", "species"),], aes(x = Depth, y = CRS, fill = Level)) + 
   scale_y_continuous(limits = c(min_comb_crs, max_comb_crs), breaks = c(-4,-3,-2,-1,0,1)) +
   theme_classic() + ggtitle('Niche Analysis Level - SSP1-2.6') + ylab('mCRS') +
   labs(fill = 'Analysis Level') + 
   theme(axis.text = element_text(size = 13), axis.title = element_text(size = 14, face = 'bold'), 
-        strip.text.x = element_text(size = 10)) 
+        strip.text.x = element_text(size = 10))
+ggsave("kingfish_data_dir/Results/Plots/species_comparison_ssp26.png")
 ```
 
 ## SSP2-4.5
 
 ```{r species comparison SSP2-4.5}
-ggplot() + geom_boxplot(data = combined_results[combined_results$Scenario == 'ssp45'&combined_results$Year == 2100 & combined_results$Level %in% c("population_all_depths", "species"),], aes(x = Depth, y = CRS, fill = Level)) + 
+ggplot() + geom_boxplot(data = combined_results[combined_results$Scenario == 'ssp45'&combined_results$Year == 2100 & combined_results$Level %in% c("population", "species"),], aes(x = Depth, y = CRS, fill = Level)) + 
   scale_y_continuous(limits = c(min_comb_crs, max_comb_crs), breaks = c(-4,-3,-2,-1,0,1)) +
   theme_classic() + ggtitle('Niche Analysis Level - SSP2-4.5') + ylab('mCRS') +
   labs(fill = 'Analysis Level') + 
   theme(axis.text = element_text(size = 13), axis.title = element_text(size = 14, face = 'bold'), 
-        strip.text.x = element_text(size = 10)) 
+        strip.text.x = element_text(size = 10))
+ggsave("kingfish_data_dir/Results/Plots/species_comparison_ssp45.png")
 ```
 
 ## SSP5-8.5
 
 ```{r species comparison SSP5-8.5}
-ggplot() + geom_boxplot(data = combined_results[combined_results$Scenario == 'ssp85'&combined_results$Year == 2100 & combined_results$Level %in% c("population_all_depths", "species"),], aes(x = Depth, y = CRS, fill = Level)) + 
+ggplot() + geom_boxplot(data = combined_results[combined_results$Scenario == 'ssp85'&combined_results$Year == 2100 & combined_results$Level %in% c("population", "species"),], aes(x = Depth, y = CRS, fill = Level)) + 
   scale_y_continuous(limits = c(min_comb_crs, max_comb_crs), breaks = c(-4,-3,-2,-1,0,1)) +
   theme_classic() + ggtitle('Niche Analysis Level - SSP5-8.5') + ylab('mCRS') +
   labs(fill = 'Analysis Level') + 
   theme(axis.text = element_text(size = 13), axis.title = element_text(size = 14, face = 'bold'), 
-        strip.text.x = element_text(size = 10)) 
+        strip.text.x = element_text(size = 10))
+ggsave("kingfish_data_dir/Results/Plots/species_comparison_ssp85.png")
 ```
 :::
 
@@ -279,7 +301,7 @@ These plots show that climate risk scores are higher and have greater variation 
 ```{r stat-analysis species comparisons}
 species_comparison= nlme::lme(CRS ~ Level * Scenario, random = ~ 1|Extract.ID, 
   data = combined_results[
-    combined_results$Level %in% c("population_all_depths", "species") & 
+    combined_results$Level %in% c("population", "species") & 
     combined_results$Year == 2100,
   ]
 )
@@ -299,12 +321,15 @@ max_depth_crs = max(depth_comparison_data$CRS)
 ## SSP1-2.6
 
 ```{r surface comparison SSP1-2.6}
-ggplot() + geom_boxplot(data = depth_comparison_data[depth_comparison_data$Scenario == 'ssp26',], aes(x = Depth, y = CRS, fill = Level)) + 
+ggplot() + geom_boxplot(data = depth_comparison_data[depth_comparison_data$Scenario == 'ssp26',], aes(x =       Depth, y = CRS, fill = Level)) + 
   #scale_y_continuous(limits = c(min_depth_crs, max_depth_crs), breaks = c(-4,-3,-2,-1,0,1)) +
-  theme_classic() + ggtitle('Life Stage Depths - SSP1-2.6') + ylab('mCRS') +
+  theme_minimal() + ggtitle('SSP1-2.6') + ylab('mCRS') +
   labs(fill = 'Life Stage Depths') + 
-  theme(axis.text = element_text(size = 13), axis.title = element_text(size = 14, face = 'bold'), 
-        strip.text.x = element_text(size = 10)) + facet_wrap(~PopID)
+  theme(
+    axis.text = element_text(size = 13), axis.title = element_text(size = 14, face = 'bold'), 
+    strip.text.x = element_text(size = 10), panel.spacing = unit(1, "lines")
+    ) + facet_wrap(~PopLab)
+ggsave("kingfish_data_dir/Results/Plots/surface_comparison_ssp26.png")
 ```
 
 ## SSP2-4.5
@@ -312,10 +337,13 @@ ggplot() + geom_boxplot(data = depth_comparison_data[depth_comparison_data$Scena
 ```{r surface comparison 2-4.5}
 ggplot() + geom_boxplot(data = depth_comparison_data[depth_comparison_data$Scenario == 'ssp45',], aes(x = Depth, y = CRS, fill = Level)) + 
   #scale_y_continuous(limits = c(min_depth_crs, max_depth_crs), breaks = c(-4,-3,-2,-1,0,1)) +
-  theme_classic() + ggtitle('Life Stage Depths - SSP2-4.5') + ylab('mCRS') +
+  theme_classic() + ggtitle('SSP2-4.5') + ylab('mCRS') +
   labs(fill = 'Life Stage Depths') + 
-  theme(axis.text = element_text(size = 13), axis.title = element_text(size = 14, face = 'bold'), 
-        strip.text.x = element_text(size = 10)) + facet_wrap(~PopID)
+  theme(
+    axis.text = element_text(size = 13), axis.title = element_text(size = 14, face = 'bold'), 
+    strip.text.x = element_text(size = 10), panel.spacing = unit(1, "lines")
+    ) + facet_wrap(~PopLab)
+ggsave("kingfish_data_dir/Results/Plots/surface_comparison_ssp45.png")
 ```
 
 ## SSP5-8.5
@@ -323,10 +351,13 @@ ggplot() + geom_boxplot(data = depth_comparison_data[depth_comparison_data$Scena
 ```{r surface comparison 5-8.5}
 ggplot() + geom_boxplot(data = depth_comparison_data[depth_comparison_data$Scenario == 'ssp85',], aes(x = Depth, y = CRS, fill = Level)) + 
   #scale_y_continuous(limits = c(min_depth_crs, max_depth_crs), breaks = c(-4,-3,-2,-1,0,1)) +
-  theme_classic() + ggtitle('Life Stage Depths - SSP5-8.5') + ylab('mCRS') +
+  theme_classic() + ggtitle('SSP5-8.5') + ylab('mCRS') +
   labs(fill = 'Life Stage Depths') + 
-  theme(axis.text = element_text(size = 13), axis.title = element_text(size = 14, face = 'bold'), 
-        strip.text.x = element_text(size = 10)) + facet_wrap(~PopID)
+  theme(
+    axis.text = element_text(size = 13), axis.title = element_text(size = 14, face = 'bold'), 
+    strip.text.x = element_text(size = 10), panel.spacing = unit(1, "lines")
+    ) + facet_wrap(~PopLab)
+ggsave("kingfish_data_dir/Results/Plots/surface_comparison_ssp85.png")
 ```
 :::
 
@@ -372,6 +403,14 @@ plotting_data = left_join(mean_change_future, warmlevel_data_all_depths[, c('Ext
 minDcrs = min(all_depths_sf$DeltaCRS_log)
 maxDcrs = max(all_depths_sf$DeltaCRS_log)
 
+plotting_data <- plotting_data %>%
+    mutate(Variable = case_when(
+        Variable == "mean_Delta_no3" ~ '"NO"["3"]',
+        Variable == "mean_Delta_ph" ~ "pH",
+        Variable == "mean_Delta_so" ~ "salinity",
+        Variable == "mean_Delta_thetao" ~ "temperature"
+    ))
+names(ENV.summary)[names(ENV.summary) %in% c("no3", "ph", "so", "thetao")] <- c("n", "p", "s", "t")
 
 ```
 
@@ -401,24 +440,24 @@ SSP245_env_data = ENV.summary[ENV.summary$Scenario %in% c("historical", "ssp245"
 SSP245_warm_level_data = warmlevel_data_all_depths[warmlevel_data_all_depths$Scenario == "ssp45",]
 
 env_change_10m <- plot(env_change_map(SSP245_10m_data, "DeltaCRS", "\u0394mCRS", "Environmental Change 10m SSP2-4.5"))
-ggsave("kingfish_data_dir/Results/Plots/env_change_10m.png", env_change_10m)
-pca_change_10m <- results_and_pca_plot(coordinates, SSP245_env_data, SSP245_warm_level_data, 10, "SSP245", "DeltaCRS", "DeltaCRS", "PCA Change 10m SSP2-4.5")
-ggsave("kingfish_data_dir/Results/Plots/pca_change_10m.png", pca_change_10m)
+ggsave("kingfish_data_dir/Results/Plots/env_change_10m.png", env_change_10m, height = 15, width = 25, units = "cm", dpi = 400)
+pca_change_10m <- results_and_pca_plot(coordinates, SSP245_env_data, SSP245_warm_level_data, 10, "SSP2-4.5", "DeltaCRS", "\u0394mCRS", "PCA Change 10m SSP2-4.5")
+ggsave("kingfish_data_dir/Results/Plots/pca_change_10m.png", pca_change_10m, height = 15, width = 25, units = "cm", dpi = 400)
 
 env_change_50m <- plot(env_change_map(SSP245_50m_data, "DeltaCRS", "\u0394mCRS", "Environmental Change 50m SSP2-4.5"))
-ggsave("kingfish_data_dir/Results/Plots/env_change_50m.png", env_change_50m)
-pca_change_50m <- results_and_pca_plot(coordinates, SSP245_env_data, SSP245_warm_level_data, 50, "SSP245", "DeltaCRS", "DeltaCRS", "PCA Change 50m SSP2-4.5")
-ggsave("kingfish_data_dir/Results/Plots/pca_change_50m.png", pca_change_50m)
+ggsave("kingfish_data_dir/Results/Plots/env_change_50m.png", env_change_50m, height = 15, width = 25, units = "cm", dpi = 400)
+pca_change_50m <- results_and_pca_plot(coordinates, SSP245_env_data, SSP245_warm_level_data, 50, "SSP2-4.5", "DeltaCRS", "\u0394mCRS", "PCA Change 50m SSP2-4.5")
+ggsave("kingfish_data_dir/Results/Plots/pca_change_50m.png", pca_change_50m, height = 15, width = 25, units = "cm", dpi = 400)
 
 env_change_100m <- plot(env_change_map(SSP245_100m_data, "DeltaCRS", "\u0394mCRS", "Environmental Change 100m SSP2-4.5"))
-ggsave("kingfish_data_dir/Results/Plots/env_change_100m.png", env_change_100m)
-pca_change_100m <- results_and_pca_plot(coordinates, SSP245_env_data, SSP245_warm_level_data, 100, "SSP245", "DeltaCRS", "DeltaCRS", "PCA Change 100m SSP2-4.5")
-ggsave("kingfish_data_dir/Results/Plots/pca_change_100m.png", pca_change_100m)
+ggsave("kingfish_data_dir/Results/Plots/env_change_100m.png", env_change_100m, height = 15, width = 25, units = "cm", dpi = 400)
+pca_change_100m <- results_and_pca_plot(coordinates, SSP245_env_data, SSP245_warm_level_data, 100, "SSP2-4.5", "DeltaCRS", "\u0394mCRS", "PCA Change 100m SSP2-4.5")
+ggsave("kingfish_data_dir/Results/Plots/pca_change_100m.png", pca_change_100m, height = 15, width = 25, units = "cm", dpi = 400)
 
 env_change_150m <- plot(env_change_map(SSP245_150m_data, "DeltaCRS", "\u0394mCRS", "Environmental Change 150m SSP2-4.5"))
-ggsave("kingfish_data_dir/Results/Plots/env_change_150m.png", env_change_150m)
-pca_change_150m <- results_and_pca_plot(coordinates, SSP245_env_data, SSP245_warm_level_data, 150, "SSP245", "DeltaCRS", "DeltaCRS", "PCA Change 150m SSP2-4.5")
-ggsave("kingfish_data_dir/Results/Plots/pca_change_150m.png", pca_change_150m)
+ggsave("kingfish_data_dir/Results/Plots/env_change_150m.png", env_change_150m, height = 15, width = 25, units = "cm", dpi = 400)
+pca_change_150m <- results_and_pca_plot(coordinates, SSP245_env_data, SSP245_warm_level_data, 150, "SSP2-4.5", "DeltaCRS", "\u0394mCRS", "PCA Change 150m SSP2-4.5")
+ggsave("kingfish_data_dir/Results/Plots/pca_change_150m.png", pca_change_150m, height = 15, width = 25, units = "cm", dpi = 400)
 ```
 
 ## SSP5-8.5
@@ -507,8 +546,18 @@ The PCA values (data from which CRS are calculated) when assessing all depths to
 However, when assessing the surface level separately the PCA values show the main change in conditions occurring towards greater temperature and lower pH (sea surface warming and acidification). These are key environmental shifts that are likely to affect egg-dispersal life stages disproportionately compared to other life stages such as juvenile or adult *S. lalandi*, that move across a depth range.
 
 ```{r emmission scenarios}
-ggplot() + geom_violin(data = warmlevel_data_all_depths, aes(x = Scenario, y = DeltaCRS, fill=Scenario), draw_quantiles = 0.5) +   geom_jitter(data = warmlevel_data_all_depths, aes(x=Scenario, y = DeltaCRS), alpha=0.1) +
-  facet_grid(PopID ~ Depth)
+ggplot() + geom_violin(data = warmlevel_data_all_depths, aes(x = Scenario, y = DeltaCRS, fill=Scenario), draw_quantiles = 0.5) +   geom_jitter(data = warmlevel_data_all_depths, aes(x=Scenario, y = DeltaCRS), alpha=0.3, width = 0.3) +
+  facet_grid(PopLab ~ Depth) + theme_minimal() +
+  theme(legend.position = "none")
+
+warmlevel_data_all_depths <- warmlevel_data_all_depths %>%
+mutate(PopID = case_when(
+        PopID == "NE_Pacific" ~ "NEP",
+        PopID == "NW_Pacific" ~ "NWP",
+        PopID == "South_Pacific" ~ "SP",
+        PopID == "South_Africa" ~ "SA"
+    )
+)
 
 all_dat_table = table(warmlevel_data_all_depths$Depth, warmlevel_data_all_depths$PopID, warmlevel_data_all_depths$Scenario)
 risk_greater_than_0 = warmlevel_data_all_depths[warmlevel_data_all_depths$DeltaCRS > 0, ]
@@ -516,8 +565,17 @@ risk_greater_than_0_table = table(risk_greater_than_0$Depth, risk_greater_than_0
 prop_table = risk_greater_than_0_table / all_dat_table
 prop_deltacrs_greater_0 = as.data.frame(prop_table)
 colnames(prop_deltacrs_greater_0) = c("Depth", "Population", "Scenario", "Proportion")
-ggplot() + geom_bar(data = prop_deltacrs_greater_0, aes(x = Scenario, y = Proportion, fill=Scenario), stat="identity") + 
-  facet_wrap(Population~Depth)
+prop_deltacrs_greater_0 <- prop_deltacrs_greater_0 %>%
+    mutate(Scenario = case_when(
+            Scenario == "ssp26" ~ "SSP1-2.6",
+            Scenario == "ssp45" ~ "SSP2-4.5",
+            Scenario == "ssp85" ~ "SSP5-8.5"
+        )
+    )
+ggplot() + geom_col(data = prop_deltacrs_greater_0, aes(x = Scenario, y = Proportion, fill=Scenario)) +
+    geom_hline(yintercept = c(0, 1)) +
+  facet_wrap(Population~Depth) + theme_minimal() +
+  theme(legend.position = "none")
+ggsave("kingfish_data_dir/Results/Plots/proportion_deltacrs_greater_0.png", width = 20, height = 15, unit = "cm", dpi = 400)
+model <- lm(Proportion ~ Scenario + Depth + Population + 0, data = prop_deltacrs_greater_0)
 ```
-
-# `{r stat-analysis depth live-stage} # emission_scen_model= nlme::lme(DeltaCRS ~ Scenario, random = ~ 1|Depth/Extract.ID,  #   data = warmlevel_data_all_depths # ) # summary(emission_scen_model) #`

@@ -354,7 +354,7 @@ horizontal_env_jitter <- function(plotting_data, population, ylims, x_var, y_var
             xmax = c(1.5, 2.5, 3.5, 4.5),
             ymin = rep(ylims[1], 4),
             ymax = rep(ylims[2], 4),
-            alpha = c(0.5, 0.3, 0.1, 1),
+            alpha = c(0.4, 0.25, 0.1, 1),
             fill = c("black", "black", "black", "white"),
             color = rep("black", 4),
             linewidth = rep(1, 4)
@@ -362,13 +362,15 @@ horizontal_env_jitter <- function(plotting_data, population, ylims, x_var, y_var
         geom_jitter(
             data = pop_data,
             aes(x = .data[[x_var]], y = .data[[y_var]], color = .data[[colouring]]),
-            shape = 1, size = 3, stroke = 2
+            shape = 1, size = 3, stroke = 2, alpha = 0.7
         ) +
         geom_hline(yintercept = 0) +
         scale_y_continuous(limits = ylims) +
+        scale_x_discrete(labels = sapply(unique(plotting_data[, x_var]), function(x) parse(text = x))) +
         theme_classic() +
         theme(legend.position = "none", plot.margin = unit(c(0, 0, 0, 0), "mm")) +
         coord_flip() +
+        labs(x = NULL, y = "future change") +
         # scale_color_viridis_c(option="turbo")
         scale_color_scico(palette = "batlow", midpoint = 0)
 
@@ -406,72 +408,10 @@ base_points <- function(plotting_data, colouring) {
             shape = 1, stroke = 2, size = 2
         ) +
         scale_color_scico(palette = "batlow", midpoint = 0) +
+        theme_void() +
         theme(legend.position = "none", panel.background = NULL)
 
     return(points)
-}
-
-env_change_map <- function(plotting_data, colouring, legend_title, title) {
-    world_360 <- sf::st_as_sf(map("world2", plot = FALSE, fill = TRUE))
-    base_map <- geom_sf(data = world_360) + coord_sf(xlim = c(0, 275), ylim = c(-52, 52))
-
-    # Creating legend for plot
-    legend <- ggplot() +
-        geom_point(
-            data = plotting_data,
-            aes(x = Longitude_360, y = Alt.Latitude, color = .data[[colouring]]),
-            shape = 1, stroke = 2, size = 2
-        ) +
-        scale_color_scico(
-            palette = "batlow",
-            midpoint = 0
-            # )
-        ) +
-        guides(color = guide_colorbar(
-            barwidth = unit(40, "mm"), # bar width
-            barheight = unit(5, "mm"), # bar height
-            # frame.colour = "black",  # bar frame color
-            # frame.linewidth = 1,  # bar frame width
-            # frame.linetype = "solid",  # bar frame linetype
-            ticks = T, # show the ticks on the bar
-            ticks.linewidth = 1, # tick width
-            ticks.colour = "black", # tick color
-            draw.ulim = T, # show the tick at the upper limit
-            draw.llim = T # show the tick at the lower limit
-        )) +
-        theme(
-            legend.position = "bottom",
-            legend.direction = "horizontal",
-        ) +
-        labs(color = legend_title)
-    legend <- ggpubr::get_legend(legend)
-
-    # Creating horizontal jitter plots
-    S_P_grob <- horizontal_env_jitter(plotting_data, "South_Pacific", c(min(plotting_data$value) - 0.01, max(plotting_data$value) + 0.01), "Variable", "value", colouring)
-    S_P_grob_coords <- c(170, 260, -80, -50) # These coordintates are in order: xmin, xmax, ymin, ymax
-
-    NEP_grob <- horizontal_env_jitter(plotting_data, "NE_Pacific", c(min(plotting_data$value) - 0.01, max(plotting_data$value) + 0.01), "Variable", "value", colouring)
-    NEP_grob_coords <- c(150, 230, 0, 30)
-
-    NWP_grob <- horizontal_env_jitter(plotting_data, "NW_Pacific", c(min(plotting_data$value) - 0.01, max(plotting_data$value) + 0.01), "Variable", "value", colouring)
-    NWP_grob_coords <- c(40, 110, 25, 55)
-
-    SA_grob <- horizontal_env_jitter(plotting_data, "South_Africa", c(min(plotting_data$value) - 0.01, max(plotting_data$value) + 0.01), "Variable", "value", colouring)
-    SA_grob_coords <- c(0, 70, -15, 15)
-
-    # Assembling final map
-    final_map <- base_points(plotting_data, colouring) +
-        geom_sf(data = world_360) +
-        coord_sf(xlim = c(0, 275), ylim = c(-52, 52)) +
-        ggtitle(title) +
-        annotation_custom(grob = ggplotGrob(S_P_grob), xmin = S_P_grob_coords[1], xmax = S_P_grob_coords[2], ymin = S_P_grob_coords[3], ymax = S_P_grob_coords[4]) +
-        annotation_custom(grob = ggplotGrob(NEP_grob), xmin = NEP_grob_coords[1], xmax = NEP_grob_coords[2], ymin = NEP_grob_coords[3], ymax = NEP_grob_coords[4]) +
-        annotation_custom(grob = ggplotGrob(NWP_grob), xmin = NWP_grob_coords[1], xmax = NWP_grob_coords[2], ymin = NWP_grob_coords[3], ymax = NWP_grob_coords[4]) +
-        annotation_custom(grob = ggplotGrob(SA_grob), xmin = SA_grob_coords[1], xmax = SA_grob_coords[2], ymin = SA_grob_coords[3], ymax = SA_grob_coords[4])
-
-    final <- ggarrange(final_map, legend, ncol = 1, heights = c(6, 1), widths = c(6, 1))
-
-    return(final)
 }
 
 pca_plot <- function(pca_results, population, centroids, polys, inset, colouring) {
@@ -480,12 +420,12 @@ pca_plot <- function(pca_results, population, centroids, polys, inset, colouring
         geom_point(
             data = pca_results[pca_results$PopID == population & pca_results$Scenario == "historical", ],
             aes(x = PC1, y = PC2, color = .data[[colouring]]),
-            shape = 1, stroke = 2, size = 2
+            shape = 1, stroke = 2, size = 2, alpha = 0.7
         ) +
         geom_point(
             data = pca_results[pca_results$PopID == population & pca_results$Scenario != "historical", ],
             aes(x = PC1, y = PC2, color = .data[[colouring]]),
-            shape = 2, stroke = 2, size = 2
+            shape = 2, stroke = 2, size = 2, alpha = 0.7
         ) +
         scale_color_scico(palette = "batlow", midpoint = 0) +
         theme_classic() +
@@ -495,10 +435,11 @@ pca_plot <- function(pca_results, population, centroids, polys, inset, colouring
         geom_point(data = centroids[centroids$PopID == population, ], aes(x = env.centroid.1., y = env.centroid.2.), color = "black", size = 2) +
         # xlim(range(pca_results[pca_results$PopID == population,]$PC1)) +
         # plot polygon outlines
-        geom_sf(data = polys[polys$PopID == population, ], alpha = 0.3) +
-
+        geom_polygon(data = st_coordinates(polys[polys$PopID == population, ]), aes(x = X, y = Y), alpha = 0.15) +
         # plot inset diagram
-        annotation_custom(grob = ggplotGrob(inset))
+        annotation_custom(grob = ggplotGrob(inset)) +
+        scale_x_continuous(n.breaks = 4)
+
 
     return(pca_plot_pop)
 }
@@ -550,6 +491,7 @@ results_and_pca_plot <- function(coordinates,
 
     coordinates_crs <- left_join(coordinates, crs_results[, c("Extract.ID", "PopID", "DeltaCRS", "CRS")], by = c("Extract.ID", "PopID"))
     coordinates_crs <- rename(coordinates_crs, Longitude_360 = longitude_360)
+    coordinates_crs <- coordinates_crs[!is.na(coordinates_crs$DeltaCRS), ]
 
     ##
     world_360 <- sf::st_as_sf(map("world2", plot = FALSE, fill = TRUE))
@@ -594,7 +536,8 @@ results_and_pca_plot <- function(coordinates,
             name = "Time Period",
             breaks = c("Historical", scenario),
             values = c(1, 2)
-        )
+        ) +
+        theme(legend.direction = "horizontal")
     pca_plot_legend <- ggpubr::get_legend(pca_plot_legend)
 
     # Creating horizontal jitter plots
@@ -619,13 +562,19 @@ results_and_pca_plot <- function(coordinates,
     # annotation_custom(grob = test, xmin=NWP_grob_coords[1], xmax=NWP_grob_coords[2], ymin=NWP_grob_coords[3], ymax=NWP_grob_coords[4]) +
     # annotation_custom(grob = ggplotGrob(SA_grob), xmin=SA_grob_coords[1], xmax=SA_grob_coords[2], ymin=SA_grob_coords[3], ymax=SA_grob_coords[4])
     final_map <- ggdraw(final_map) +
-        draw_plot(S_P_grob, x = 0.675, y = 0.05, width = 0.3, height = 0.275) +
-        draw_plot(NEP_grob, x = 0.55, y = 0.5, width = 0.3, height = 0.25) +
-        draw_plot(NWP_grob, x = 0.215, y = 0.6, width = 0.3, height = 0.3) +
-        draw_plot(SA_grob, x = 0.05, y = 0.41, width = 0.3, height = 0.3) +
-        draw_label(title, x = 0.13, y = 0.96)
+        draw_plot(S_P_grob, x = 0.675, y = 0.05, width = 0.25, height = 0.25) +
+        draw_plot(NEP_grob, x = 0.55, y = 0.5, width = 0.25, height = 0.25) +
+        draw_plot(NWP_grob, x = 0.15, y = 0.5, width = 0.25, height = 0.25) +
+        draw_plot(SA_grob, x = 0.05, y = -0.005, width = 0.25, height = 0.25) +
+        ggtitle(title) +
+        theme(plot.title = element_text(hjust = 0.06, vjust = 0.25))
 
-    final <- ggarrange(final_map, legend, pca_plot_legend, ncol = 1, heights = c(6, 1, 1), widths = c(6, 1, 1))
+    final <- ggarrange(
+        final_map,
+        legend,
+        pca_plot_legend,
+        ncol = 1, heights = c(6, 0.5, 0.5), widths = c(6, 1, 1)
+    )
 
     return(final)
 }
@@ -667,7 +616,7 @@ env_change_map <- function(plotting_data, colouring, legend_title, title) {
 
     # Creating horizontal jitter plots
     S_P_grob <- horizontal_env_jitter(plotting_data, "South_Pacific", c(min(plotting_data$value) - 0.01, max(plotting_data$value) + 0.01), "Variable", "value", colouring)
-    S_P_grob_coords <- c(170, 260, -80, -50) # These coordintates are in order: xmin, xmax, ymin, ymax
+    S_P_grob_coords <- c(170, 260, -90, -60) # These coordintates are in order: xmin, xmax, ymin, ymax
 
     NEP_grob <- horizontal_env_jitter(plotting_data, "NE_Pacific", c(min(plotting_data$value) - 0.01, max(plotting_data$value) + 0.01), "Variable", "value", colouring)
     NEP_grob_coords <- c(150, 230, 0, 30)
@@ -683,6 +632,7 @@ env_change_map <- function(plotting_data, colouring, legend_title, title) {
         geom_sf(data = world_360) +
         coord_sf(xlim = c(0, 275), ylim = c(-52, 52)) +
         ggtitle(title) +
+        theme(plot.title = element_text(hjust = 0.06)) +
         annotation_custom(grob = ggplotGrob(S_P_grob), xmin = S_P_grob_coords[1], xmax = S_P_grob_coords[2], ymin = S_P_grob_coords[3], ymax = S_P_grob_coords[4]) +
         annotation_custom(grob = ggplotGrob(NEP_grob), xmin = NEP_grob_coords[1], xmax = NEP_grob_coords[2], ymin = NEP_grob_coords[3], ymax = NEP_grob_coords[4]) +
         annotation_custom(grob = ggplotGrob(NWP_grob), xmin = NWP_grob_coords[1], xmax = NWP_grob_coords[2], ymin = NWP_grob_coords[3], ymax = NWP_grob_coords[4]) +
@@ -692,3 +642,5 @@ env_change_map <- function(plotting_data, colouring, legend_title, title) {
 
     return(final)
 }
+
+coordinates[coordinates$longitude_360 == max(coordinates$longitude_360), ]
